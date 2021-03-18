@@ -25,7 +25,7 @@ inline void* u7_vm_align_memory(void* ptr, int alignment) {
 }
 
 // Indicates if the address is aligned.
-inline bool u7_vm_memory_is_aligned(void* ptr, int alignment) {
+inline bool u7_vm_memory_is_aligned(void const* ptr, int alignment) {
   return (void*)((((uintptr_t)ptr) + alignment - 1) &
                  (((uintptr_t)alignment)) - 1);
 }
@@ -33,6 +33,10 @@ inline bool u7_vm_memory_is_aligned(void* ptr, int alignment) {
 // Adds an offset to the pointer.
 inline void* u7_vm_memory_add_offset(void* ptr, size_t offset) {
   return ((char*)ptr) + offset;
+}
+
+inline const void* u7_vm_memory_add_offset_c(void const* ptr, size_t offset) {
+  return ((char const*)ptr) + offset;
 }
 
 // Returns the number of bytes between `begin` and `end`.

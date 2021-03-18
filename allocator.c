@@ -2,12 +2,18 @@
 
 #include "@/public/memory_utils.h"
 
+#include <errno.h>
 #include <stdlib.h>
 
-static void* u7_vm_default_allocator_alloc(struct u7_vm_allocator* self,
-                                           size_t size) {
+static u7_error u7_vm_default_allocator_alloc(struct u7_vm_allocator* self,
+                                              size_t size, void** result) {
   (void)self;
-  return malloc(size);
+  if ((*result = malloc(size)) == NULL) {
+    return u7_errorf(
+        u7_errno_category(), ENOMEM,
+        "u7_vm_default_allocator_alloc: malloc(%zu): not enough memory", size);
+  }
+  return u7_ok();
 }
 
 static void u7_vm_default_allocator_free(struct u7_vm_allocator* self,

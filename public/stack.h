@@ -30,12 +30,13 @@ void u7_vm_stack_init(struct u7_vm_stack* self,
 // Releases stack resources.
 void u7_vm_stack_destroy(struct u7_vm_stack* self);
 
-// Reserves memory space in the stack.
-bool u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity);
+// Reserves memory for the stack.
+u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity);
 
 // Returns a pointer to the new stack frame.
-void* u7_vm_stack_push(struct u7_vm_stack* self,
-                       struct u7_vm_memory_layout const* frame_layout);
+u7_error u7_vm_stack_push(struct u7_vm_stack* self,
+                          struct u7_vm_memory_layout const* frame_layout,
+                          void** result);
 
 // Drops the trailing stack frame.
 void u7_vm_stack_pop(struct u7_vm_stack* self);

@@ -24,13 +24,14 @@ typedef void (*u7_vm_memory_layout_init_memory_fn_t)(
 typedef void (*u7_vm_memory_layout_uninit_memory_fn_t)(
     struct u7_vm_memory_layout const* self, void* memory);
 
-// Copies values to an initialized location.
-typedef void (*u7_vm_memory_layout_copy_memory_fn_t)(
-    struct u7_vm_memory_layout const* self, void* source, void* destination);
-
 // Relocates values to uninitialized location.
 typedef void (*u7_vm_memory_layout_relocate_memory_fn_t)(
     struct u7_vm_memory_layout const* self, void* source, void* destination);
+
+// Copies values to an initialized location.
+typedef void (*u7_vm_memory_layout_copy_memory_fn_t)(
+    struct u7_vm_memory_layout const* self, void const* source,
+    void* destination);
 
 // This struct declares usage API of Memory Layout.
 //
@@ -79,7 +80,8 @@ static inline void u7_vm_memory_layout_uninit_memory(
 // Source address has to be initialized.
 // Destination address must be initialized.
 static inline void u7_vm_memory_layout_copy_memory(
-    struct u7_vm_memory_layout const* self, void* source, void* destination) {
+    struct u7_vm_memory_layout const* self, void const* source,
+    void* destination) {
   assert(u7_vm_memory_is_aligned(source, self->alignment));
   assert(u7_vm_memory_is_aligned(destination, self->alignment));
   if (source != destination) {
@@ -105,6 +107,12 @@ static inline void u7_vm_memory_layout_relocate_memory(
       memcpy(destination, source, self->size);
     }
   }
+}
+
+static inline bool u7_vm_memory_layout_is_pod(
+    struct u7_vm_memory_layout const* self) {
+  return !self->init_memory_fn && !self->uninit_memory_fn &&
+         !self->relocate_memory_fn && !self->copy_memory_fn;
 }
 
 #ifdef __cplusplus

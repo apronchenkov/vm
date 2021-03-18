@@ -1,0 +1,21 @@
+* DONE u7_error
+  CLOSED: [2021-02-14]
+* DONE u7_str
+  CLOSED: [2021-02-15]
+* DONE u7_str_error(category, code, "Message: %s", messgae)
+  CLOSED: [2021-02-16 Tue 21:27]
+
+* DONE Integrate vm with u7_error
+  CLOSED: [2021-03-18 Thu 23:30]
+** DONE allocator
+   CLOSED: [2021-03-18 Thu 23:29]
+** DONE stack
+   CLOSED: [2021-03-18 Thu 23:29]
+** DONE state
+   CLOSED: [2021-03-18 Thu 23:29]
+
+* TODO Prototype some trivial operations
+
+* TODO u7_ostreambuf
+* TODO u7_vm_repr?
+* TODO u7_vm_type

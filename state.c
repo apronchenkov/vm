@@ -2,34 +2,29 @@
 
 #include <assert.h>
 
-bool u7_vm_state_init(struct u7_vm_state* self,
-                      struct u7_vm_allocator* stack_allocator,
-                      struct u7_vm_memory_layout const* static_layout,
-                      struct u7_vm_instruction const** instructions,
-                      size_t instructions_size) {
+u7_error u7_vm_state_init(struct u7_vm_state* self,
+                          struct u7_vm_allocator* stack_allocator,
+                          struct u7_vm_memory_layout const* static_layout,
+                          struct u7_vm_instruction const** instructions,
+                          size_t instructions_size) {
   self->run = false;
-  self->error = NULL;
+  self->last_error = u7_ok();
   self->instructions = instructions;
   self->instructions_size = instructions_size;
   self->ip = 0;
   u7_vm_stack_init(&self->stack, stack_allocator);
-  self->stack.base = u7_vm_stack_push(&self->stack, static_layout);
-  if (!self->stack.base) {
-    u7_vm_stack_destroy(&self->stack);
-    return false;
-  }
-  return true;
+  return u7_vm_stack_push(&self->stack, static_layout, &self->stack.base);
 }
 
 void u7_vm_state_destroy(struct u7_vm_state* self) {
   u7_vm_stack_destroy(&self->stack);
+  u7_error_release(self->last_error);
 }
 
 void u7_vm_state_run(struct u7_vm_state* self) {
-  if (self->error) {
-    return;
-  }
-  for (self->run = true; self->run;) {
+  self->run = true;
+  u7_error_clear(&self->last_error);
+  while (self->run) {
     assert(self->ip < self->instructions_size);
     u7_vm_instruction_execute(self->instructions[self->ip++], self);
   }
