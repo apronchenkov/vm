@@ -26,13 +26,15 @@ struct u7_vm_state {
 
 u7_error u7_vm_state_init(struct u7_vm_state* self,
                           struct u7_vm_allocator* stack_allocator,
-                          struct u7_vm_memory_layout const* static_layout,
+                          struct u7_vm_stack_frame_layout const* statics_layout,
                           struct u7_vm_instruction const** instructions,
                           size_t instructions_size);
 
 void u7_vm_state_destroy(struct u7_vm_state* self);
 
 void u7_vm_state_run(struct u7_vm_state* self);
+
+void* u7_vm_state_statics(struct u7_vm_state* self);
 
 #ifdef __cplusplus
 }  // extern "C"

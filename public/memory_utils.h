@@ -15,36 +15,44 @@ enum {
   kU7VmStandardAlignment = _Alignof(long double),
 };
 
-inline size_t u7_vm_align_size(size_t size, int alignment) {
+static inline size_t u7_vm_align_size(size_t size, int alignment) {
   return (size + alignment - 1) & (-(size_t)alignment);
 }
 
 // Returns the first aligned address.
-inline void* u7_vm_align_memory(void* ptr, int alignment) {
+static inline void* u7_vm_align_memory(void* ptr, int alignment) {
   return (void*)((((uintptr_t)ptr) + alignment - 1) & (-(uintptr_t)alignment));
 }
 
 // Indicates if the address is aligned.
-inline bool u7_vm_memory_is_aligned(void const* ptr, int alignment) {
+static inline bool u7_vm_memory_is_aligned(void const* ptr, int alignment) {
   return (void*)((((uintptr_t)ptr) + alignment - 1) &
                  (((uintptr_t)alignment)) - 1);
 }
 
 // Adds an offset to the pointer.
-inline void* u7_vm_memory_add_offset(void* ptr, size_t offset) {
+#define u7_vm_memory_add_offset(ptr, offset) \
+  _Generic((ptr),                                   \
+           void*: u7_vm_memory_add_offset_v,        \
+           const void*: u7_vm_memory_add_offset_vc  \
+           )(ptr, offset)
+
+static inline void* u7_vm_memory_add_offset_v(void* ptr, size_t offset) {
   return ((char*)ptr) + offset;
 }
 
-inline const void* u7_vm_memory_add_offset_c(void const* ptr, size_t offset) {
+static inline const void* u7_vm_memory_add_offset_vc(void const* ptr,
+                                                     size_t offset) {
   return ((char const*)ptr) + offset;
 }
 
 // Returns the number of bytes between `begin` and `end`.
 //
 // NOTE: The address in `begin` must not be after `end`, UB otherwise.
-inline size_t u7_vm_memory_byte_distance(void* begin, void* end) {
+static inline size_t u7_vm_memory_byte_distance(void const* begin,
+                                                void const* end) {
   assert(begin <= end);
-  return ((char*)end) - ((char*)begin);
+  return ((const char*)end) - ((const char*)begin);
 }
 
 #ifdef __cplusplus

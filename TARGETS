@@ -7,14 +7,28 @@ cc_library(
         'public/memory_layout.h',
         'public/memory_utils.h',
         'public/stack.h',
+        'public/stack_push_pop.h',
         'public/state.h',
+        'public/vm0.h',
     ],
     srcs=[
         'allocator.c',
         'stack.c',
         'state.c',
+        'vm0.c',
     ],
     deps=[
+        '//github.com/apronchenkov/error:error',
+    ],
+)
+
+cc_binary(
+    name='test',
+    srcs=[
+        'test.c',
+    ],
+    deps=[
+        ':vm',
         '//github.com/apronchenkov/error:error',
     ],
 )
