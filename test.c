@@ -15,19 +15,23 @@ u7_error Main() {
   };
   struct u7_vm_state state;
 
-  struct u7_vm0_load_constant i0 = u7_vm0_load_constant_i64(34);
-  struct u7_vm0_load_constant i1 = u7_vm0_load_constant_i64(17);
-  struct u7_vm0_operation i2 = u7_vm0_operation_add_i64();
-  struct u7_vm0_operation i3 = u7_vm0_operation_print_i64();
-  struct u7_vm0_operation i4 = u7_vm0_operation_println();
-  struct u7_vm0_operation i5 = u7_vm0_operation_yield();
+  struct u7_vm0_instruction is[] = {
+      u7_vm0_load_constant_i64(34),
+      u7_vm0_load_constant_i64(17),
+      u7_vm0_add_i64(),
+      u7_vm0_print_i64(),
+      u7_vm0_println(),
+      u7_vm0_yield(),
+  };
 
-  struct u7_vm_instruction const* is[] = {&i0.base, &i1.base, &i2.base,
-                                          &i3.base, &i4.base, &i5.base};
+  struct u7_vm_instruction const* js[sizeof(is) / sizeof(is[0])];
+  for (size_t i = 0; i < sizeof(is) / sizeof(is[0]); ++i) {
+    js[i] = &is[i].base;
+  }
 
   U7_RETURN_IF_ERROR(u7_vm_state_init(&state, u7_vm_default_allocator(),
-                                      &statics_layout, &is[0],
-                                      sizeof(is) / sizeof(is[0])));
+                                      &statics_layout, &js[0],
+                                      sizeof(js) / sizeof(js[0])));
   u7_vm_state_run(&state);
   u7_error result = u7_error_acquire(state.last_error);
   u7_vm_state_destroy(&state);

@@ -84,6 +84,7 @@ u7_error u7_vm_stack_push_frame(
 void u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
   size_t base_offset = self->base_offset;
   size_t top_offset = self->top_offset;
+  (void)top_offset;
   assert(base_offset < top_offset);
   assert(base_offset % kU7VmDefaultAlignment == 0);
   assert(top_offset % kU7VmDefaultAlignment == 0);
