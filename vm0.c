@@ -550,3 +550,14 @@ static void u7_vm0_yield_execute(struct u7_vm_instruction const* self,
 }
 
 U7_VM0_INSTRUCTION_0(yield)
+
+// dump_state
+
+static void u7_vm0_dump_state_execute(struct u7_vm_instruction const* self,
+                                      struct u7_vm_state* state) {
+  (void)self;
+  printf("ip=%zd  bp=%zd  sp=%zd\n", state->ip, state->stack.base_offset,
+         state->stack.top_offset);
+}
+
+U7_VM0_INSTRUCTION_0(dump_state)

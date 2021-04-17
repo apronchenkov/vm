@@ -81,6 +81,8 @@ struct u7_vm0_instruction u7_vm0_println();
 
 struct u7_vm0_instruction u7_vm0_yield();
 
+struct u7_vm0_instruction u7_vm0_dump_state();
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus
