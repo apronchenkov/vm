@@ -108,7 +108,7 @@ u7_vm_stack_current_frame_layout(struct u7_vm_stack* self) {
 }
 
 // Returns a pointer the current locals.
-static inline void* u7_vm_stack_locals(struct u7_vm_stack* self) {
+static inline void* u7_vm_stack_current_locals(struct u7_vm_stack* self) {
   assert(self->base_offset % kU7VmDefaultAlignment == 0);
   assert(self->top_offset >=
          self->base_offset + kU7VmStackFrameHeaderSize +

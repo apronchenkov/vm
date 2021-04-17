@@ -73,6 +73,179 @@ struct u7_vm0_instruction u7_vm0_load_constant_f64(double value) {
   return result;
 }
 
+// load_local
+
+static void u7_vm0_load_local_i32_execute(struct u7_vm_instruction const* self,
+                                          struct u7_vm_state* state) {
+  size_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(offset % _Alignof(int32_t) == 0);
+  assert(offset + sizeof(int32_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  u7_vm_stack_push_i32(&state->stack,
+                       *(int32_t*)u7_vm_memory_add_offset(
+                           u7_vm_stack_current_locals(&state->stack), offset));
+}
+
+static void u7_vm0_load_local_i64_execute(struct u7_vm_instruction const* self,
+                                          struct u7_vm_state* state) {
+  size_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(offset % _Alignof(int64_t) == 0);
+  assert(offset + sizeof(int64_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  u7_vm_stack_push_i64(&state->stack,
+                       *(int64_t*)u7_vm_memory_add_offset(
+                           u7_vm_stack_current_locals(&state->stack), offset));
+}
+
+static void u7_vm0_load_local_f32_execute(struct u7_vm_instruction const* self,
+                                          struct u7_vm_state* state) {
+  size_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(offset % _Alignof(float) == 0);
+  assert(offset + sizeof(float) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  u7_vm_stack_push_f32(&state->stack,
+                       *(float*)u7_vm_memory_add_offset(
+                           u7_vm_stack_current_locals(&state->stack), offset));
+}
+
+static void u7_vm0_load_local_f64_execute(struct u7_vm_instruction const* self,
+                                          struct u7_vm_state* state) {
+  size_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(offset % _Alignof(double) == 0);
+  assert(offset + sizeof(double) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  u7_vm_stack_push_f32(&state->stack,
+                       *(double*)u7_vm_memory_add_offset(
+                           u7_vm_stack_current_locals(&state->stack), offset));
+}
+
+struct u7_vm0_instruction u7_vm0_load_local_i32(size_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_load_local_i32_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_load_local_i64(size_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_load_local_i64_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_load_local_f32(size_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_load_local_f32_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_load_local_f64(size_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_load_local_f64_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+// store_local
+
+static void u7_vm0_store_local_i32_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  size_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(offset % _Alignof(int32_t) == 0);
+  assert(offset + sizeof(int32_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  *(int32_t*)u7_vm_memory_add_offset(u7_vm_stack_current_locals(&state->stack),
+                                     offset) =
+      u7_vm_stack_pop_i32(&state->stack);
+}
+
+static void u7_vm0_store_local_i64_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  size_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(offset % _Alignof(int64_t) == 0);
+  assert(offset + sizeof(int64_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  *(int64_t*)u7_vm_memory_add_offset(u7_vm_stack_current_locals(&state->stack),
+                                     offset) =
+      u7_vm_stack_pop_i64(&state->stack);
+}
+
+static void u7_vm0_store_local_f32_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  size_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(offset % _Alignof(float) == 0);
+  assert(offset + sizeof(float) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  *(float*)u7_vm_memory_add_offset(u7_vm_stack_current_locals(&state->stack),
+                                   offset) = u7_vm_stack_pop_f32(&state->stack);
+}
+
+static void u7_vm0_store_local_f64_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  size_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(offset % _Alignof(double) == 0);
+  assert(offset + sizeof(double) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  *(double*)u7_vm_memory_add_offset(u7_vm_stack_current_locals(&state->stack),
+                                    offset) =
+      u7_vm_stack_pop_f64(&state->stack);
+}
+
+struct u7_vm0_instruction u7_vm0_store_local_i32(size_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_store_local_i32_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_store_local_i64(size_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_store_local_i64_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_store_local_f32(size_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_store_local_f32_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_store_local_f64(size_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_store_local_f64_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+// jump
+
+static void u7_vm0_jump_execute(struct u7_vm_instruction const* self,
+                                struct u7_vm_state* state) {
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  state->ip += offset;
+}
+
+struct u7_vm0_instruction u7_vm0_jump(int64_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
 // u7_vm0_operation
 
 // duplicate

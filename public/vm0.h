@@ -3,6 +3,7 @@
 
 #include "@/public/instruction.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -26,6 +27,18 @@ struct u7_vm0_instruction u7_vm0_load_constant_i32(int32_t value);
 struct u7_vm0_instruction u7_vm0_load_constant_i64(int64_t value);
 struct u7_vm0_instruction u7_vm0_load_constant_f32(float value);
 struct u7_vm0_instruction u7_vm0_load_constant_f64(double value);
+
+struct u7_vm0_instruction u7_vm0_load_local_i32(size_t offset);
+struct u7_vm0_instruction u7_vm0_load_local_i64(size_t offset);
+struct u7_vm0_instruction u7_vm0_load_local_f32(size_t offset);
+struct u7_vm0_instruction u7_vm0_load_local_f64(size_t offset);
+
+struct u7_vm0_instruction u7_vm0_store_local_i32(size_t offset);
+struct u7_vm0_instruction u7_vm0_store_local_i64(size_t offset);
+struct u7_vm0_instruction u7_vm0_store_local_f32(size_t offset);
+struct u7_vm0_instruction u7_vm0_store_local_f64(size_t offset);
+
+struct u7_vm0_instruction u7_vm0_jump(int64_t offset);
 
 struct u7_vm0_instruction u7_vm0_duplicate_i32();
 struct u7_vm0_instruction u7_vm0_duplicate_i64();
