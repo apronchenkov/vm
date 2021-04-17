@@ -16,9 +16,9 @@ u7_error Main() {
   struct u7_vm_state state;
 
   struct u7_vm0_instruction is[] = {
-      u7_vm0_load_constant_i64(34),
-      u7_vm0_load_constant_i64(17),
-      u7_vm0_add_i64(),
+      u7_vm0_load_constant_i64(INT64_MIN),
+      u7_vm0_load_constant_i64(-1),
+      u7_vm0_multiply_i64(),
       u7_vm0_print_i64(),
       u7_vm0_println(),
       u7_vm0_yield(),

@@ -3,6 +3,7 @@
 #include "@/public/stack_push_pop.h"
 #include "@/public/state.h"
 
+#include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -70,32 +71,48 @@ struct u7_vm0_instruction u7_vm0_load_constant_f64(double value) {
 static void u7_vm0_add_i32_execute(struct u7_vm_instruction const* self,
                                    struct u7_vm_state* state) {
   (void)self;
-  uint32_t lhs = u7_vm_stack_pop_i32(&state->stack);
-  uint32_t rhs = u7_vm_stack_pop_i32(&state->stack);
-  u7_vm_stack_push_i32(&state->stack, lhs + rhs);
+  int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t lhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t result;
+  if (__builtin_add_overflow(lhs, rhs, &result)) {
+    state->last_error = u7_errorf(
+        u7_errno_category(), ERANGE,
+        "integer overflow: u7_vm0_add_i32 lhs=%" PRId32 ", rhs=%" PRId32, lhs,
+        rhs);
+  } else {
+    u7_vm_stack_push_i32(&state->stack, result);
+  }
 }
 
 static void u7_vm0_add_i64_execute(struct u7_vm_instruction const* self,
                                    struct u7_vm_state* state) {
   (void)self;
-  uint64_t lhs = u7_vm_stack_pop_i64(&state->stack);
-  uint64_t rhs = u7_vm_stack_pop_i64(&state->stack);
-  u7_vm_stack_push_i64(&state->stack, lhs + rhs);
+  int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t lhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t result;
+  if (__builtin_add_overflow(lhs, rhs, &result)) {
+    state->last_error = u7_errorf(
+        u7_errno_category(), ERANGE,
+        "integer overflow: u7_vm0_add_i64 lhs=%" PRId64 ", rhs=%" PRId64, lhs,
+        rhs);
+  } else {
+    u7_vm_stack_push_i64(&state->stack, result);
+  }
 }
 
 static void u7_vm0_add_f32_execute(struct u7_vm_instruction const* self,
                                    struct u7_vm_state* state) {
   (void)self;
-  float lhs = u7_vm_stack_pop_f32(&state->stack);
   float rhs = u7_vm_stack_pop_f32(&state->stack);
+  float lhs = u7_vm_stack_pop_f32(&state->stack);
   u7_vm_stack_push_f32(&state->stack, lhs + rhs);
 }
 
 static void u7_vm0_add_f64_execute(struct u7_vm_instruction const* self,
                                    struct u7_vm_state* state) {
   (void)self;
-  double lhs = u7_vm_stack_pop_f64(&state->stack);
   double rhs = u7_vm_stack_pop_f64(&state->stack);
+  double lhs = u7_vm_stack_pop_f64(&state->stack);
   u7_vm_stack_push_f64(&state->stack, lhs + rhs);
 }
 
@@ -120,6 +137,154 @@ struct u7_vm0_instruction u7_vm0_add_f32() {
 struct u7_vm0_instruction u7_vm0_add_f64() {
   struct u7_vm0_instruction result = {
       .base = {.execute_fn = u7_vm0_add_f64_execute}};
+  return result;
+}
+
+// subtract
+
+static void u7_vm0_subtract_i32_execute(struct u7_vm_instruction const* self,
+                                        struct u7_vm_state* state) {
+  (void)self;
+  int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t lhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t result;
+  if (__builtin_sub_overflow(lhs, rhs, &result)) {
+    state->last_error = u7_errorf(
+        u7_errno_category(), ERANGE,
+        "integer overflow: u7_vm0_subtract_i32 lhs=%" PRId32 ", rhs=%" PRId32,
+        lhs, rhs);
+  } else {
+    u7_vm_stack_push_i32(&state->stack, result);
+  }
+}
+
+static void u7_vm0_subtract_i64_execute(struct u7_vm_instruction const* self,
+                                        struct u7_vm_state* state) {
+  (void)self;
+  int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t lhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t result;
+  if (__builtin_sub_overflow(lhs, rhs, &result)) {
+    state->last_error = u7_errorf(
+        u7_errno_category(), ERANGE,
+        "integer overflow: u7_vm0_subtract_i64 lhs=%" PRId64 ", rhs=%" PRId64,
+        lhs, rhs);
+  } else {
+    u7_vm_stack_push_i64(&state->stack, result);
+  }
+}
+
+static void u7_vm0_subtract_f32_execute(struct u7_vm_instruction const* self,
+                                        struct u7_vm_state* state) {
+  (void)self;
+  float rhs = u7_vm_stack_pop_f32(&state->stack);
+  float lhs = u7_vm_stack_pop_f32(&state->stack);
+  u7_vm_stack_push_f32(&state->stack, lhs - rhs);
+}
+
+static void u7_vm0_subtract_f64_execute(struct u7_vm_instruction const* self,
+                                        struct u7_vm_state* state) {
+  (void)self;
+  double rhs = u7_vm_stack_pop_f64(&state->stack);
+  double lhs = u7_vm_stack_pop_f64(&state->stack);
+  u7_vm_stack_push_f64(&state->stack, lhs - rhs);
+}
+
+struct u7_vm0_instruction u7_vm0_subtract_i32() {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = u7_vm0_subtract_i32_execute}};
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_subtract_i64() {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = u7_vm0_subtract_i64_execute}};
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_subtract_f32() {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = u7_vm0_subtract_f32_execute}};
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_subtract_f64() {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = u7_vm0_subtract_f64_execute}};
+  return result;
+}
+
+// multiply
+
+static void u7_vm0_multiply_i32_execute(struct u7_vm_instruction const* self,
+                                        struct u7_vm_state* state) {
+  (void)self;
+  int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t lhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t result;
+  if (__builtin_mul_overflow(lhs, rhs, &result)) {
+    state->last_error = u7_errorf(
+        u7_errno_category(), ERANGE,
+        "integer overflow: u7_vm0_multiply_i32 lhs=%" PRId32 ", rhs=%" PRId32,
+        lhs, rhs);
+  } else {
+    u7_vm_stack_push_i32(&state->stack, result);
+  }
+}
+
+static void u7_vm0_multiply_i64_execute(struct u7_vm_instruction const* self,
+                                        struct u7_vm_state* state) {
+  (void)self;
+  int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t lhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t result;
+  if (__builtin_mul_overflow(lhs, rhs, &result)) {
+    state->last_error = u7_errorf(
+        u7_errno_category(), ERANGE,
+        "integer overflow: u7_vm0_multiply_i64 lhs=%" PRId64 ", rhs=%" PRId64,
+        lhs, rhs);
+  } else {
+    u7_vm_stack_push_i64(&state->stack, result);
+  }
+}
+
+static void u7_vm0_multiply_f32_execute(struct u7_vm_instruction const* self,
+                                        struct u7_vm_state* state) {
+  (void)self;
+  float rhs = u7_vm_stack_pop_f32(&state->stack);
+  float lhs = u7_vm_stack_pop_f32(&state->stack);
+  u7_vm_stack_push_f32(&state->stack, lhs * rhs);
+}
+
+static void u7_vm0_multiply_f64_execute(struct u7_vm_instruction const* self,
+                                        struct u7_vm_state* state) {
+  (void)self;
+  double rhs = u7_vm_stack_pop_f64(&state->stack);
+  double lhs = u7_vm_stack_pop_f64(&state->stack);
+  u7_vm_stack_push_f64(&state->stack, lhs * rhs);
+}
+
+struct u7_vm0_instruction u7_vm0_multiply_i32() {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = u7_vm0_multiply_i32_execute}};
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_multiply_i64() {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = u7_vm0_multiply_i64_execute}};
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_multiply_f32() {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = u7_vm0_multiply_f32_execute}};
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_multiply_f64() {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = u7_vm0_multiply_f64_execute}};
   return result;
 }
 
