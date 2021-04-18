@@ -14,7 +14,30 @@
 ** DONE state
    CLOSED: [2021-03-18 Thu 23:29]
 
-* TODO Prototype some trivial operations
+* DONE Prototype some trivial operations
+
+
+* TODO Instructions
+  - [X] inc
+  - [X] neg
+
+  - [ ] compare_less
+  - [ ] compare_less_equal
+  - [ ] compare_equal
+  - [ ] compare_not_equal
+  - [ ] compare_greater_equal
+  - [ ] compare_greater
+
+  - [ ] jump_zero
+  - [ ] jump_not_zero
+
+  - [ ] or
+  - [ ] and
+  - [ ] not
+  - [ ] xor
+
+* TODO Declare local variables
+* TODO labels
 
 * TODO u7_ostreambuf
 * TODO u7_vm_repr?

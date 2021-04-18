@@ -279,22 +279,203 @@ U7_VM0_INSTRUCTION_0(duplicate_i64)
 U7_VM0_INSTRUCTION_0(duplicate_f32)
 U7_VM0_INSTRUCTION_0(duplicate_f64)
 
+// abs
+
+static void u7_vm0_abs_i32_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  int32_t x = *p;
+  if (x == INT32_MIN) {
+    state->last_error =
+        u7_errorf(u7_errno_category(), ERANGE,
+                  "integer overflow: u7_vm0_abs_i32 x=%" PRId32, x);
+    state->run = false;
+  } else {
+    *p = (x >= 0 ? x : -x);
+  }
+}
+
+static void u7_vm0_abs_i64_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  int64_t x = *p;
+  if (x == INT64_MIN) {
+    state->last_error =
+        u7_errorf(u7_errno_category(), ERANGE,
+                  "integer overflow: u7_vm0_abs_i64 x=%" PRId64, x);
+    state->run = false;
+  } else {
+    *p = (x >= 0 ? x : -x);
+  }
+}
+
+static void u7_vm0_abs_f32_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  float* p = u7_vm_stack_peek_f32(&state->stack);
+  float x = *p;
+  *p = (x >= 0 ? x : -x);
+}
+
+static void u7_vm0_abs_f64_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  double* p = u7_vm_stack_peek_f64(&state->stack);
+  double x = *p;
+  *p = (x >= 0 ? x : -x);
+}
+
+U7_VM0_INSTRUCTION_0(abs_i32)
+U7_VM0_INSTRUCTION_0(abs_i64)
+U7_VM0_INSTRUCTION_0(abs_f32)
+U7_VM0_INSTRUCTION_0(abs_f64)
+
+// neg
+
+static void u7_vm0_neg_i32_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  int32_t x = *p;
+  if (x == INT32_MIN) {
+    state->last_error =
+        u7_errorf(u7_errno_category(), ERANGE,
+                  "integer overflow: u7_vm0_neg_i32 x=%" PRId32, x);
+    state->run = false;
+  } else {
+    *p = -x;
+  }
+}
+
+static void u7_vm0_neg_i64_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  int64_t x = *p;
+  if (x == INT64_MIN) {
+    state->last_error =
+        u7_errorf(u7_errno_category(), ERANGE,
+                  "integer overflow: u7_vm0_neg_i64 x=%" PRId64, x);
+    state->run = false;
+  } else {
+    *p = -x;
+  }
+}
+
+static void u7_vm0_neg_f32_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  float* p = u7_vm_stack_peek_f32(&state->stack);
+  float x = *p;
+  *p = -x;
+}
+
+static void u7_vm0_neg_f64_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  double* p = u7_vm_stack_peek_f64(&state->stack);
+  double x = *p;
+  *p = -x;
+}
+
+U7_VM0_INSTRUCTION_0(neg_i32)
+U7_VM0_INSTRUCTION_0(neg_i64)
+U7_VM0_INSTRUCTION_0(neg_f32)
+U7_VM0_INSTRUCTION_0(neg_f64)
+
+// inc
+
+static void u7_vm0_inc_i32_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  int32_t x = *p;
+  int32_t delta = ((struct u7_vm0_instruction const*)self)->arg1.i32;
+  if (__builtin_add_overflow(x, delta, p)) {
+    state->last_error = u7_errorf(u7_errno_category(), ERANGE,
+                                  "integer overflow: u7_vm0_inc_i32 x=%" PRId32
+                                  ", delta=%" PRId32,
+                                  x, delta);
+    state->run = false;
+  }
+}
+
+static void u7_vm0_inc_i64_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  int64_t x = *p;
+  int64_t delta = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  if (__builtin_add_overflow(x, delta, p)) {
+    state->last_error = u7_errorf(u7_errno_category(), ERANGE,
+                                  "integer overflow: u7_vm0_inc_i64 x=%" PRId64
+                                  ", delta=%" PRId64,
+                                  x, delta);
+    state->run = false;
+  }
+}
+
+static void u7_vm0_inc_f32_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  float* lhs = u7_vm_stack_peek_f32(&state->stack);
+  *lhs += ((struct u7_vm0_instruction const*)self)->arg1.f32;
+}
+
+static void u7_vm0_inc_f64_execute(struct u7_vm_instruction const* self,
+                                   struct u7_vm_state* state) {
+  (void)self;
+  double* lhs = u7_vm_stack_peek_f64(&state->stack);
+  *lhs += ((struct u7_vm0_instruction const*)self)->arg1.f64;
+}
+
+struct u7_vm0_instruction u7_vm0_inc_i32(int32_t delta) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_inc_i32_execute},
+      .arg1 = {.i32 = delta},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_inc_i64(int64_t delta) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_inc_i64_execute},
+      .arg1 = {.i64 = delta},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_inc_f32(float delta) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_inc_f32_execute},
+      .arg1 = {.f32 = delta},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_inc_f64(double delta) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_inc_f64_execute},
+      .arg1 = {.f64 = delta},
+  };
+  return result;
+}
+
 // add
 
 static void u7_vm0_add_i32_execute(struct u7_vm_instruction const* self,
                                    struct u7_vm_state* state) {
   (void)self;
   int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
-  int32_t lhs = u7_vm_stack_pop_i32(&state->stack);
-  int32_t result;
-  if (__builtin_add_overflow(lhs, rhs, &result)) {
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  int32_t lhs = *p;
+  if (__builtin_add_overflow(lhs, rhs, p)) {
     state->last_error = u7_errorf(
         u7_errno_category(), ERANGE,
         "integer overflow: u7_vm0_add_i32 lhs=%" PRId32 ", rhs=%" PRId32, lhs,
         rhs);
     state->run = false;
-  } else {
-    u7_vm_stack_push_i32(&state->stack, result);
   }
 }
 
@@ -302,16 +483,14 @@ static void u7_vm0_add_i64_execute(struct u7_vm_instruction const* self,
                                    struct u7_vm_state* state) {
   (void)self;
   int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
-  int64_t lhs = u7_vm_stack_pop_i64(&state->stack);
-  int64_t result;
-  if (__builtin_add_overflow(lhs, rhs, &result)) {
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  int64_t lhs = *p;
+  if (__builtin_add_overflow(lhs, rhs, p)) {
     state->last_error = u7_errorf(
         u7_errno_category(), ERANGE,
         "integer overflow: u7_vm0_add_i64 lhs=%" PRId64 ", rhs=%" PRId64, lhs,
         rhs);
     state->run = false;
-  } else {
-    u7_vm_stack_push_i64(&state->stack, result);
   }
 }
 
@@ -319,16 +498,16 @@ static void u7_vm0_add_f32_execute(struct u7_vm_instruction const* self,
                                    struct u7_vm_state* state) {
   (void)self;
   float rhs = u7_vm_stack_pop_f32(&state->stack);
-  float lhs = u7_vm_stack_pop_f32(&state->stack);
-  u7_vm_stack_push_f32(&state->stack, lhs + rhs);
+  float* lhs = u7_vm_stack_peek_f32(&state->stack);
+  *lhs += rhs;
 }
 
 static void u7_vm0_add_f64_execute(struct u7_vm_instruction const* self,
                                    struct u7_vm_state* state) {
   (void)self;
   double rhs = u7_vm_stack_pop_f64(&state->stack);
-  double lhs = u7_vm_stack_pop_f64(&state->stack);
-  u7_vm_stack_push_f64(&state->stack, lhs + rhs);
+  double* lhs = u7_vm_stack_peek_f64(&state->stack);
+  *lhs += rhs;
 }
 
 U7_VM0_INSTRUCTION_0(add_i32)
@@ -342,16 +521,14 @@ static void u7_vm0_subtract_i32_execute(struct u7_vm_instruction const* self,
                                         struct u7_vm_state* state) {
   (void)self;
   int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
-  int32_t lhs = u7_vm_stack_pop_i32(&state->stack);
-  int32_t result;
-  if (__builtin_sub_overflow(lhs, rhs, &result)) {
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  int32_t lhs = *p;
+  if (__builtin_sub_overflow(lhs, rhs, p)) {
     state->last_error = u7_errorf(
         u7_errno_category(), ERANGE,
         "integer overflow: u7_vm0_subtract_i32 lhs=%" PRId32 ", rhs=%" PRId32,
         lhs, rhs);
     state->run = false;
-  } else {
-    u7_vm_stack_push_i32(&state->stack, result);
   }
 }
 
@@ -359,16 +536,14 @@ static void u7_vm0_subtract_i64_execute(struct u7_vm_instruction const* self,
                                         struct u7_vm_state* state) {
   (void)self;
   int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
-  int64_t lhs = u7_vm_stack_pop_i64(&state->stack);
-  int64_t result;
-  if (__builtin_sub_overflow(lhs, rhs, &result)) {
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  int64_t lhs = *p;
+  if (__builtin_sub_overflow(lhs, rhs, p)) {
     state->last_error = u7_errorf(
         u7_errno_category(), ERANGE,
         "integer overflow: u7_vm0_subtract_i64 lhs=%" PRId64 ", rhs=%" PRId64,
         lhs, rhs);
     state->run = false;
-  } else {
-    u7_vm_stack_push_i64(&state->stack, result);
   }
 }
 
@@ -376,16 +551,16 @@ static void u7_vm0_subtract_f32_execute(struct u7_vm_instruction const* self,
                                         struct u7_vm_state* state) {
   (void)self;
   float rhs = u7_vm_stack_pop_f32(&state->stack);
-  float lhs = u7_vm_stack_pop_f32(&state->stack);
-  u7_vm_stack_push_f32(&state->stack, lhs - rhs);
+  float* lhs = u7_vm_stack_peek_f32(&state->stack);
+  *lhs -= rhs;
 }
 
 static void u7_vm0_subtract_f64_execute(struct u7_vm_instruction const* self,
                                         struct u7_vm_state* state) {
   (void)self;
   double rhs = u7_vm_stack_pop_f64(&state->stack);
-  double lhs = u7_vm_stack_pop_f64(&state->stack);
-  u7_vm_stack_push_f64(&state->stack, lhs - rhs);
+  double* lhs = u7_vm_stack_peek_f64(&state->stack);
+  *lhs -= rhs;
 }
 
 U7_VM0_INSTRUCTION_0(subtract_i32)
@@ -399,16 +574,14 @@ static void u7_vm0_multiply_i32_execute(struct u7_vm_instruction const* self,
                                         struct u7_vm_state* state) {
   (void)self;
   int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
-  int32_t lhs = u7_vm_stack_pop_i32(&state->stack);
-  int32_t result;
-  if (__builtin_mul_overflow(lhs, rhs, &result)) {
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  int32_t lhs = *p;
+  if (__builtin_mul_overflow(lhs, rhs, p)) {
     state->last_error = u7_errorf(
         u7_errno_category(), ERANGE,
         "integer overflow: u7_vm0_multiply_i32 lhs=%" PRId32 ", rhs=%" PRId32,
         lhs, rhs);
     state->run = false;
-  } else {
-    u7_vm_stack_push_i32(&state->stack, result);
   }
 }
 
@@ -416,16 +589,14 @@ static void u7_vm0_multiply_i64_execute(struct u7_vm_instruction const* self,
                                         struct u7_vm_state* state) {
   (void)self;
   int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
-  int64_t lhs = u7_vm_stack_pop_i64(&state->stack);
-  int64_t result;
-  if (__builtin_mul_overflow(lhs, rhs, &result)) {
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  int64_t lhs = *p;
+  if (__builtin_mul_overflow(lhs, rhs, p)) {
     state->last_error = u7_errorf(
         u7_errno_category(), ERANGE,
         "integer overflow: u7_vm0_multiply_i64 lhs=%" PRId64 ", rhs=%" PRId64,
         lhs, rhs);
     state->run = false;
-  } else {
-    u7_vm_stack_push_i64(&state->stack, result);
   }
 }
 
@@ -433,16 +604,16 @@ static void u7_vm0_multiply_f32_execute(struct u7_vm_instruction const* self,
                                         struct u7_vm_state* state) {
   (void)self;
   float rhs = u7_vm_stack_pop_f32(&state->stack);
-  float lhs = u7_vm_stack_pop_f32(&state->stack);
-  u7_vm_stack_push_f32(&state->stack, lhs * rhs);
+  float* lhs = u7_vm_stack_peek_f32(&state->stack);
+  *lhs *= rhs;
 }
 
 static void u7_vm0_multiply_f64_execute(struct u7_vm_instruction const* self,
                                         struct u7_vm_state* state) {
   (void)self;
   double rhs = u7_vm_stack_pop_f64(&state->stack);
-  double lhs = u7_vm_stack_pop_f64(&state->stack);
-  u7_vm_stack_push_f64(&state->stack, lhs * rhs);
+  double* lhs = u7_vm_stack_peek_f64(&state->stack);
+  *lhs *= rhs;
 }
 
 U7_VM0_INSTRUCTION_0(multiply_i32)
@@ -456,16 +627,16 @@ static void u7_vm0_divide_f32_execute(struct u7_vm_instruction const* self,
                                       struct u7_vm_state* state) {
   (void)self;
   float rhs = u7_vm_stack_pop_f32(&state->stack);
-  float lhs = u7_vm_stack_pop_f32(&state->stack);
-  u7_vm_stack_push_f32(&state->stack, lhs / rhs);
+  float* lhs = u7_vm_stack_peek_f32(&state->stack);
+  *lhs /= rhs;
 }
 
 static void u7_vm0_divide_f64_execute(struct u7_vm_instruction const* self,
                                       struct u7_vm_state* state) {
   (void)self;
   double rhs = u7_vm_stack_pop_f64(&state->stack);
-  double lhs = u7_vm_stack_pop_f64(&state->stack);
-  u7_vm_stack_push_f64(&state->stack, lhs / rhs);
+  double* lhs = u7_vm_stack_peek_f64(&state->stack);
+  *lhs /= rhs;
 }
 
 U7_VM0_INSTRUCTION_0(divide_f32)
@@ -476,15 +647,15 @@ U7_VM0_INSTRUCTION_0(divide_f64)
 static void u7_vm0_floor_f32_execute(struct u7_vm_instruction const* self,
                                      struct u7_vm_state* state) {
   (void)self;
-  u7_vm_stack_push_f32(&state->stack,
-                       __builtin_floor(u7_vm_stack_pop_f32(&state->stack)));
+  float* p = u7_vm_stack_peek_f32(&state->stack);
+  *p = __builtin_floor(*p);
 }
 
 static void u7_vm0_floor_f64_execute(struct u7_vm_instruction const* self,
                                      struct u7_vm_state* state) {
   (void)self;
-  u7_vm_stack_push_f64(&state->stack,
-                       __builtin_floorl(u7_vm_stack_pop_f64(&state->stack)));
+  double* p = u7_vm_stack_peek_f64(&state->stack);
+  *p = __builtin_floor(*p);
 }
 
 U7_VM0_INSTRUCTION_0(floor_f32)
@@ -493,15 +664,15 @@ U7_VM0_INSTRUCTION_0(floor_f64)
 static void u7_vm0_ceil_f32_execute(struct u7_vm_instruction const* self,
                                     struct u7_vm_state* state) {
   (void)self;
-  u7_vm_stack_push_f32(&state->stack,
-                       __builtin_ceil(u7_vm_stack_pop_f32(&state->stack)));
+  float* p = u7_vm_stack_peek_f32(&state->stack);
+  *p = __builtin_ceil(*p);
 }
 
 static void u7_vm0_ceil_f64_execute(struct u7_vm_instruction const* self,
                                     struct u7_vm_state* state) {
   (void)self;
-  u7_vm_stack_push_f64(&state->stack,
-                       __builtin_ceill(u7_vm_stack_pop_f64(&state->stack)));
+  double* p = u7_vm_stack_peek_f64(&state->stack);
+  *p = __builtin_ceil(*p);
 }
 
 U7_VM0_INSTRUCTION_0(ceil_f32)
@@ -510,15 +681,15 @@ U7_VM0_INSTRUCTION_0(ceil_f64)
 static void u7_vm0_round_f32_execute(struct u7_vm_instruction const* self,
                                      struct u7_vm_state* state) {
   (void)self;
-  u7_vm_stack_push_f32(&state->stack,
-                       __builtin_round(u7_vm_stack_pop_f32(&state->stack)));
+  float* p = u7_vm_stack_peek_f32(&state->stack);
+  *p = __builtin_round(*p);
 }
 
 static void u7_vm0_round_f64_execute(struct u7_vm_instruction const* self,
                                      struct u7_vm_state* state) {
   (void)self;
-  u7_vm_stack_push_f64(&state->stack,
-                       __builtin_roundl(u7_vm_stack_pop_f64(&state->stack)));
+  double* p = u7_vm_stack_peek_f64(&state->stack);
+  *p = __builtin_round(*p);
 }
 
 U7_VM0_INSTRUCTION_0(round_f32)
@@ -527,15 +698,15 @@ U7_VM0_INSTRUCTION_0(round_f64)
 static void u7_vm0_trunc_f32_execute(struct u7_vm_instruction const* self,
                                      struct u7_vm_state* state) {
   (void)self;
-  u7_vm_stack_push_f32(&state->stack,
-                       __builtin_trunc(u7_vm_stack_pop_f32(&state->stack)));
+  float* p = u7_vm_stack_peek_f32(&state->stack);
+  *p = __builtin_trunc(*p);
 }
 
 static void u7_vm0_trunc_f64_execute(struct u7_vm_instruction const* self,
                                      struct u7_vm_state* state) {
   (void)self;
-  u7_vm_stack_push_f64(&state->stack,
-                       __builtin_truncl(u7_vm_stack_pop_f64(&state->stack)));
+  double* p = u7_vm_stack_peek_f64(&state->stack);
+  *p = __builtin_trunc(*p);
 }
 
 U7_VM0_INSTRUCTION_0(trunc_f32)

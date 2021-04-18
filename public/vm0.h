@@ -45,6 +45,21 @@ struct u7_vm0_instruction u7_vm0_duplicate_i64();
 struct u7_vm0_instruction u7_vm0_duplicate_f32();
 struct u7_vm0_instruction u7_vm0_duplicate_f64();
 
+struct u7_vm0_instruction u7_vm0_abs_i32();
+struct u7_vm0_instruction u7_vm0_abs_i64();
+struct u7_vm0_instruction u7_vm0_abs_f32();
+struct u7_vm0_instruction u7_vm0_abs_f64();
+
+struct u7_vm0_instruction u7_vm0_neg_i32();
+struct u7_vm0_instruction u7_vm0_neg_i64();
+struct u7_vm0_instruction u7_vm0_neg_f32();
+struct u7_vm0_instruction u7_vm0_neg_f64();
+
+struct u7_vm0_instruction u7_vm0_inc_i32(int32_t delta);
+struct u7_vm0_instruction u7_vm0_inc_i64(int64_t delta);
+struct u7_vm0_instruction u7_vm0_inc_f32(float delta);
+struct u7_vm0_instruction u7_vm0_inc_f64(double delta);
+
 struct u7_vm0_instruction u7_vm0_add_i32();
 struct u7_vm0_instruction u7_vm0_add_i64();
 struct u7_vm0_instruction u7_vm0_add_f32();
