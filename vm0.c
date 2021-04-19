@@ -426,6 +426,88 @@ U7_VM0_INSTRUCTION_0(duplicate_i64)
 U7_VM0_INSTRUCTION_0(duplicate_f32)
 U7_VM0_INSTRUCTION_0(duplicate_f64)
 
+// not
+
+static void u7_vm0_bitwise_not_i32_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  (void)self;
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  *p = ~(*p);
+}
+
+static void u7_vm0_bitwise_not_i64_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  (void)self;
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  *p = ~(*p);
+}
+
+U7_VM0_INSTRUCTION_0(bitwise_not_i32)
+U7_VM0_INSTRUCTION_0(bitwise_not_i64)
+
+// and
+
+static void u7_vm0_bitwise_and_i32_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  (void)self;
+  int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  *p &= rhs;
+}
+
+static void u7_vm0_bitwise_and_i64_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  (void)self;
+  int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  *p &= rhs;
+}
+
+U7_VM0_INSTRUCTION_0(bitwise_and_i32)
+U7_VM0_INSTRUCTION_0(bitwise_and_i64)
+
+// or
+
+static void u7_vm0_bitwise_or_i32_execute(struct u7_vm_instruction const* self,
+                                          struct u7_vm_state* state) {
+  (void)self;
+  int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  *p |= rhs;
+}
+
+static void u7_vm0_bitwise_or_i64_execute(struct u7_vm_instruction const* self,
+                                          struct u7_vm_state* state) {
+  (void)self;
+  int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  *p |= rhs;
+}
+
+U7_VM0_INSTRUCTION_0(bitwise_or_i32)
+U7_VM0_INSTRUCTION_0(bitwise_or_i64)
+
+// xor
+
+static void u7_vm0_bitwise_xor_i32_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  (void)self;
+  int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t* p = u7_vm_stack_peek_i32(&state->stack);
+  *p |= rhs;
+}
+
+static void u7_vm0_bitwise_xor_i64_execute(struct u7_vm_instruction const* self,
+                                           struct u7_vm_state* state) {
+  (void)self;
+  int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t* p = u7_vm_stack_peek_i64(&state->stack);
+  *p |= rhs;
+}
+
+U7_VM0_INSTRUCTION_0(bitwise_xor_i32)
+U7_VM0_INSTRUCTION_0(bitwise_xor_i64)
+
 // abs
 
 static void u7_vm0_abs_i32_execute(struct u7_vm_instruction const* self,

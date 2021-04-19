@@ -49,13 +49,21 @@ struct u7_vm0_instruction u7_vm0_jump_if_i32_negative(int64_t offset);
 struct u7_vm0_instruction u7_vm0_jump_if_i32_positive(int64_t offset);
 struct u7_vm0_instruction u7_vm0_jump_if_i32_negative_or_zero(int64_t offset);
 struct u7_vm0_instruction u7_vm0_jump_if_i32_positive_or_zero(int64_t offset);
-
 struct u7_vm0_instruction u7_vm0_jump(int64_t offset);
 
 struct u7_vm0_instruction u7_vm0_duplicate_i32();
 struct u7_vm0_instruction u7_vm0_duplicate_i64();
 struct u7_vm0_instruction u7_vm0_duplicate_f32();
 struct u7_vm0_instruction u7_vm0_duplicate_f64();
+
+struct u7_vm0_instruction u7_vm0_bitwise_not_i32();
+struct u7_vm0_instruction u7_vm0_bitwise_not_i64();
+struct u7_vm0_instruction u7_vm0_bitwise_and_i32();
+struct u7_vm0_instruction u7_vm0_bitwise_and_i64();
+struct u7_vm0_instruction u7_vm0_bitwise_or_i32();
+struct u7_vm0_instruction u7_vm0_bitwise_or_i64();
+struct u7_vm0_instruction u7_vm0_bitwise_xor_i32();
+struct u7_vm0_instruction u7_vm0_bitwise_xor_i64();
 
 struct u7_vm0_instruction u7_vm0_abs_i32();
 struct u7_vm0_instruction u7_vm0_abs_i64();
