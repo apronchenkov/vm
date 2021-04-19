@@ -228,7 +228,106 @@ struct u7_vm0_instruction u7_vm0_store_local_f64(size_t offset) {
   return result;
 }
 
+// compare
+
+static void u7_vm0_compare_i32_execute(struct u7_vm_instruction const* self,
+                                       struct u7_vm_state* state) {
+  (void)self;
+  int32_t rhs = u7_vm_stack_pop_i32(&state->stack);
+  int32_t lhs = u7_vm_stack_pop_i32(&state->stack);
+  u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)));
+}
+
+static void u7_vm0_compare_i64_execute(struct u7_vm_instruction const* self,
+                                       struct u7_vm_state* state) {
+  (void)self;
+  int64_t rhs = u7_vm_stack_pop_i64(&state->stack);
+  int64_t lhs = u7_vm_stack_pop_i64(&state->stack);
+  u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)));
+}
+
+static void u7_vm0_compare_f32_execute(struct u7_vm_instruction const* self,
+                                       struct u7_vm_state* state) {
+  (void)self;
+  float rhs = u7_vm_stack_pop_f32(&state->stack);
+  float lhs = u7_vm_stack_pop_f32(&state->stack);
+  u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)));
+}
+
+static void u7_vm0_compare_f64_execute(struct u7_vm_instruction const* self,
+                                       struct u7_vm_state* state) {
+  (void)self;
+  double rhs = u7_vm_stack_pop_f64(&state->stack);
+  double lhs = u7_vm_stack_pop_f64(&state->stack);
+  u7_vm_stack_push_i32(&state->stack, (lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)));
+}
+
+U7_VM0_INSTRUCTION_0(compare_i32)
+U7_VM0_INSTRUCTION_0(compare_i64)
+U7_VM0_INSTRUCTION_0(compare_f32)
+U7_VM0_INSTRUCTION_0(compare_f64)
+
 // jump
+
+static void u7_vm0_jump_if_i32_zero_execute(
+    struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i32(&state->stack) == 0) {
+    state->ip += offset;
+  }
+}
+
+static void u7_vm0_jump_if_i32_negative_execute(
+    struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i32(&state->stack) < 0) {
+    state->ip += offset;
+  }
+}
+
+static void u7_vm0_jump_if_i32_positive_execute(
+    struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i32(&state->stack) > 0) {
+    state->ip += offset;
+  }
+}
+
+static void u7_vm0_jump_if_i32_not_zero_execute(
+    struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i32(&state->stack) != 0) {
+    state->ip += offset;
+  }
+}
+
+static void u7_vm0_jump_if_i32_negative_or_zero_execute(
+    struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i32(&state->stack) <= 0) {
+    state->ip += offset;
+  }
+}
+
+static void u7_vm0_jump_if_i32_positive_or_zero_execute(
+    struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i32(&state->stack) >= 0) {
+    state->ip += offset;
+  }
+}
 
 static void u7_vm0_jump_execute(struct u7_vm_instruction const* self,
                                 struct u7_vm_state* state) {
@@ -236,6 +335,54 @@ static void u7_vm0_jump_execute(struct u7_vm_instruction const* self,
   assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
          (offset < 0 && state->ip >= -(size_t)offset));
   state->ip += offset;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i32_zero(int64_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i32_zero_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i32_not_zero(int64_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i32_not_zero_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i32_negative(int64_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i32_negative_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i32_negative_or_zero(int64_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i32_negative_or_zero_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i32_positive(int64_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i32_positive_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i32_positive_or_zero(int64_t offset) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i32_positive_or_zero_execute},
+      .arg1 = {.i64 = offset},
+  };
+  return result;
 }
 
 struct u7_vm0_instruction u7_vm0_jump(int64_t offset) {

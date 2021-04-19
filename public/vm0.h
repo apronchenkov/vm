@@ -38,6 +38,18 @@ struct u7_vm0_instruction u7_vm0_store_local_i64(size_t offset);
 struct u7_vm0_instruction u7_vm0_store_local_f32(size_t offset);
 struct u7_vm0_instruction u7_vm0_store_local_f64(size_t offset);
 
+struct u7_vm0_instruction u7_vm0_compare_i32();
+struct u7_vm0_instruction u7_vm0_compare_i64();
+struct u7_vm0_instruction u7_vm0_compare_f32();
+struct u7_vm0_instruction u7_vm0_compare_f64();
+
+struct u7_vm0_instruction u7_vm0_jump_if_i32_zero(int64_t offset);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_not_zero(int64_t offset);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_negative(int64_t offset);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_positive(int64_t offset);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_negative_or_zero(int64_t offset);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_positive_or_zero(int64_t offset);
+
 struct u7_vm0_instruction u7_vm0_jump(int64_t offset);
 
 struct u7_vm0_instruction u7_vm0_duplicate_i32();

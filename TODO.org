@@ -21,15 +21,14 @@
   - [X] inc
   - [X] neg
 
-  - [ ] compare_less
-  - [ ] compare_less_equal
-  - [ ] compare_equal
-  - [ ] compare_not_equal
-  - [ ] compare_greater_equal
-  - [ ] compare_greater
+  - [X] compare
 
-  - [ ] jump_zero
-  - [ ] jump_not_zero
+  - [X] jump_if_i32_zero
+  - [X] jump_if_i32_negative
+  - [X] jump_if_i32_positive
+  - [X] jump_if_i32_not_zero
+  - [X] jump_if_i32_not_negative
+  - [X] jump_if_i32_not_positive
 
   - [ ] or
   - [ ] and
