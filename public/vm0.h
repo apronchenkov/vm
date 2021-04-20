@@ -3,7 +3,6 @@
 
 #include "@/public/instruction.h"
 
-#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -17,6 +16,14 @@ union u7_vm0_value {
   double f64;
 };
 
+struct u7_vm0_local_variable {
+  int64_t offset;  // non-negative
+};
+
+struct u7_vm0_local_label {
+  int64_t offset;
+};
+
 struct u7_vm0_instruction {
   struct u7_vm_instruction base;
   union u7_vm0_value arg1;
@@ -28,28 +35,42 @@ struct u7_vm0_instruction u7_vm0_load_constant_i64(int64_t value);
 struct u7_vm0_instruction u7_vm0_load_constant_f32(float value);
 struct u7_vm0_instruction u7_vm0_load_constant_f64(double value);
 
-struct u7_vm0_instruction u7_vm0_load_local_i32(size_t offset);
-struct u7_vm0_instruction u7_vm0_load_local_i64(size_t offset);
-struct u7_vm0_instruction u7_vm0_load_local_f32(size_t offset);
-struct u7_vm0_instruction u7_vm0_load_local_f64(size_t offset);
+struct u7_vm0_instruction u7_vm0_load_local_i32(
+    struct u7_vm0_local_variable var);
+struct u7_vm0_instruction u7_vm0_load_local_i64(
+    struct u7_vm0_local_variable var);
+struct u7_vm0_instruction u7_vm0_load_local_f32(
+    struct u7_vm0_local_variable var);
+struct u7_vm0_instruction u7_vm0_load_local_f64(
+    struct u7_vm0_local_variable var);
 
-struct u7_vm0_instruction u7_vm0_store_local_i32(size_t offset);
-struct u7_vm0_instruction u7_vm0_store_local_i64(size_t offset);
-struct u7_vm0_instruction u7_vm0_store_local_f32(size_t offset);
-struct u7_vm0_instruction u7_vm0_store_local_f64(size_t offset);
+struct u7_vm0_instruction u7_vm0_store_local_i32(
+    struct u7_vm0_local_variable var);
+struct u7_vm0_instruction u7_vm0_store_local_i64(
+    struct u7_vm0_local_variable var);
+struct u7_vm0_instruction u7_vm0_store_local_f32(
+    struct u7_vm0_local_variable var);
+struct u7_vm0_instruction u7_vm0_store_local_f64(
+    struct u7_vm0_local_variable var);
 
 struct u7_vm0_instruction u7_vm0_compare_i32();
 struct u7_vm0_instruction u7_vm0_compare_i64();
 struct u7_vm0_instruction u7_vm0_compare_f32();
 struct u7_vm0_instruction u7_vm0_compare_f64();
 
-struct u7_vm0_instruction u7_vm0_jump_if_i32_zero(int64_t offset);
-struct u7_vm0_instruction u7_vm0_jump_if_i32_not_zero(int64_t offset);
-struct u7_vm0_instruction u7_vm0_jump_if_i32_negative(int64_t offset);
-struct u7_vm0_instruction u7_vm0_jump_if_i32_positive(int64_t offset);
-struct u7_vm0_instruction u7_vm0_jump_if_i32_negative_or_zero(int64_t offset);
-struct u7_vm0_instruction u7_vm0_jump_if_i32_positive_or_zero(int64_t offset);
-struct u7_vm0_instruction u7_vm0_jump(int64_t offset);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_zero(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_not_zero(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_negative(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_positive(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_negative_or_zero(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i32_positive_or_zero(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump(struct u7_vm0_local_label label);
 
 struct u7_vm0_instruction u7_vm0_duplicate_i32();
 struct u7_vm0_instruction u7_vm0_duplicate_i64();
