@@ -1,6 +1,9 @@
 #ifndef U7_VM_INSTRUCTION_H_
 #define U7_VM_INSTRUCTION_H_
 
+#include <assert.h>
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
@@ -9,8 +12,8 @@ struct u7_vm_state;
 struct u7_vm_instruction;
 
 // Executes the instruction.
-typedef void (*u7_vm_instruction_execute_fn_t)(
-    struct u7_vm_instruction const* self, struct u7_vm_state* state);
+typedef bool (*u7_vm_instruction_execute_fn_t)(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state);
 
 // This struct declares the usage API of a VM Instruction.
 //
@@ -21,9 +24,9 @@ struct u7_vm_instruction {
 };
 
 // Executes the instruction within the given state.
-inline void u7_vm_instruction_execute(struct u7_vm_instruction const* self,
-                                      struct u7_vm_state* state) {
-  self->execute_fn(self, state);
+static inline bool u7_vm_instruction_execute(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  return tail == 0 || self->execute_fn(tail - 1, self, state);
 }
 
 #ifdef __cplusplus

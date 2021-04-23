@@ -28,12 +28,13 @@ struct u7_vm_allocator {
   u7_vm_allocator_free_fn_t free_fn;
 };
 
-inline u7_error u7_vm_allocator_alloc(struct u7_vm_allocator* self, size_t size,
-                                      void** result) {
+static inline u7_error u7_vm_allocator_alloc(struct u7_vm_allocator* self,
+                                             size_t size, void** result) {
   return self->alloc_fn(self, size, result);
 }
 
-inline void u7_vm_allocator_free(struct u7_vm_allocator* self, void* ptr) {
+static inline void u7_vm_allocator_free(struct u7_vm_allocator* self,
+                                        void* ptr) {
   self->free_fn(self, ptr);
 }
 

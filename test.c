@@ -37,7 +37,7 @@ u7_error Main() {
                                       &statics_layout, &js[0],
                                       sizeof(js) / sizeof(js[0])));
   u7_vm_state_run(&state);
-  u7_error result = u7_error_acquire(state.last_error);
+  u7_error result = u7_error_acquire(state.error);
   u7_vm_state_destroy(&state);
   return result;
 }

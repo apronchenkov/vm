@@ -119,6 +119,12 @@ struct u7_vm0_instruction u7_vm0_multiply_f64();
 struct u7_vm0_instruction u7_vm0_divide_f32();
 struct u7_vm0_instruction u7_vm0_divide_f64();
 
+struct u7_vm0_instruction u7_vm0_floordiv_u32();
+struct u7_vm0_instruction u7_vm0_floordiv_u64();
+
+struct u7_vm0_instruction u7_vm0_floormod_u32();
+struct u7_vm0_instruction u7_vm0_floormod_u64();
+
 struct u7_vm0_instruction u7_vm0_floor_f32();
 struct u7_vm0_instruction u7_vm0_floor_f64();
 struct u7_vm0_instruction u7_vm0_ceil_f32();
@@ -127,6 +133,9 @@ struct u7_vm0_instruction u7_vm0_round_f32();
 struct u7_vm0_instruction u7_vm0_round_f64();
 struct u7_vm0_instruction u7_vm0_trunc_f32();
 struct u7_vm0_instruction u7_vm0_trunc_f64();
+
+struct u7_vm0_instruction u7_vm0_sqrt_f32();
+struct u7_vm0_instruction u7_vm0_sqrt_f64();
 
 struct u7_vm0_instruction u7_vm0_cast_i32_to_i64();
 struct u7_vm0_instruction u7_vm0_cast_i32_to_f32();
