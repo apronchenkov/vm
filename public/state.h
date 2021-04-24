@@ -35,21 +35,6 @@ void u7_vm_state_run(struct u7_vm_state* self);
 
 void* u7_vm_state_statics(struct u7_vm_state* self);
 
-static inline void u7_vm_instruction_enter(int tail,
-                                           struct u7_vm_instruction const* self,
-                                           struct u7_vm_state* state) {
-  (void)tail;
-  (void)self;
-  state->ip += 1;
-}
-
-static inline bool u7_vm_instruction_tail_call(
-    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
-  (void)self;
-  assert(state->ip < state->instructions_size);
-  return u7_vm_instruction_execute(tail, state->instructions[state->ip], state);
-}
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus

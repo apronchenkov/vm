@@ -24,10 +24,19 @@ struct u7_vm_instruction {
 };
 
 // Executes the instruction within the given state.
-static inline bool u7_vm_instruction_execute(
-    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
-  return tail == 0 || self->execute_fn(tail - 1, self, state);
-}
+#define u7_vm_instruction_execute(tail, self, state) \
+  (tail == 0 || self->execute_fn(tail - 1, self, state))
+
+#define u7_vm_instruction_enter(tail, self, state) \
+  do {                                             \
+    (void)tail;                                    \
+    (void)self;                                    \
+    state->ip += 1;                                \
+  } while (false)
+
+#define u7_vm_instruction_tail_call(tail, self, state)       \
+  ((void)self, assert(state->ip < state->instructions_size), \
+   u7_vm_instruction_execute(tail, state->instructions[state->ip], state))
 
 #ifdef __cplusplus
 }  // extern "C"
