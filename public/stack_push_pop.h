@@ -148,74 +148,22 @@ static inline double* u7_vm_stack_peek_f64(struct u7_vm_stack* self) {
 
 // Duplicates a value on top of the stack.
 static inline void u7_vm_stack_duplicate_i32(struct u7_vm_stack* self) {
-  assert(self->top_offset % kU7VmDefaultAlignment == 0);
-  assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
-             u7_vm_stack_current_frame_layout(self)->locals_size +
-             u7_vm_align_size(sizeof(int32_t), kU7VmDefaultAlignment));
-  assert(self->capacity >=
-         self->top_offset +
-             u7_vm_align_size(sizeof(int32_t), kU7VmDefaultAlignment));
-  *(int32_t*)u7_vm_memory_add_offset(self->memory, self->top_offset) =
-      *(int32_t*)u7_vm_memory_add_offset(
-          self->memory,
-          self->top_offset -
-              u7_vm_align_size(sizeof(int32_t), kU7VmDefaultAlignment));
-  self->top_offset += u7_vm_align_size(sizeof(int32_t), kU7VmDefaultAlignment);
+  u7_vm_stack_push_i32(self, *u7_vm_stack_peek_i32(self));
 }
 
 // Duplicates a value on top of the stack.
 static inline void u7_vm_stack_duplicate_i64(struct u7_vm_stack* self) {
-  assert(self->top_offset % kU7VmDefaultAlignment == 0);
-  assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
-             u7_vm_stack_current_frame_layout(self)->locals_size +
-             u7_vm_align_size(sizeof(int64_t), kU7VmDefaultAlignment));
-  assert(self->capacity >=
-         self->top_offset +
-             u7_vm_align_size(sizeof(int64_t), kU7VmDefaultAlignment));
-  *(int64_t*)u7_vm_memory_add_offset(self->memory, self->top_offset) =
-      *(int64_t*)u7_vm_memory_add_offset(
-          self->memory,
-          self->top_offset -
-              u7_vm_align_size(sizeof(int64_t), kU7VmDefaultAlignment));
-  self->top_offset += u7_vm_align_size(sizeof(int64_t), kU7VmDefaultAlignment);
+  u7_vm_stack_push_i64(self, *u7_vm_stack_peek_i64(self));
 }
 
 // Duplicates a value on top of the stack.
 static inline void u7_vm_stack_duplicate_f32(struct u7_vm_stack* self) {
-  assert(self->top_offset % kU7VmDefaultAlignment == 0);
-  assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
-             u7_vm_stack_current_frame_layout(self)->locals_size +
-             u7_vm_align_size(sizeof(float), kU7VmDefaultAlignment));
-  assert(self->capacity >=
-         self->top_offset +
-             u7_vm_align_size(sizeof(float), kU7VmDefaultAlignment));
-  *(float*)u7_vm_memory_add_offset(self->memory, self->top_offset) =
-      *(float*)u7_vm_memory_add_offset(
-          self->memory,
-          self->top_offset -
-              u7_vm_align_size(sizeof(float), kU7VmDefaultAlignment));
-  self->top_offset += u7_vm_align_size(sizeof(float), kU7VmDefaultAlignment);
+  u7_vm_stack_push_f32(self, *u7_vm_stack_peek_f32(self));
 }
 
 // Duplicates a value on top of the stack.
 static inline void u7_vm_stack_duplicate_f64(struct u7_vm_stack* self) {
-  assert(self->top_offset % kU7VmDefaultAlignment == 0);
-  assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
-             u7_vm_stack_current_frame_layout(self)->locals_size +
-             u7_vm_align_size(sizeof(double), kU7VmDefaultAlignment));
-  assert(self->capacity >=
-         self->top_offset +
-             u7_vm_align_size(sizeof(double), kU7VmDefaultAlignment));
-  *(double*)u7_vm_memory_add_offset(self->memory, self->top_offset) =
-      *(double*)u7_vm_memory_add_offset(
-          self->memory,
-          self->top_offset -
-              u7_vm_align_size(sizeof(double), kU7VmDefaultAlignment));
-  self->top_offset += u7_vm_align_size(sizeof(double), kU7VmDefaultAlignment);
+  u7_vm_stack_push_f64(self, *u7_vm_stack_peek_f64(self));
 }
 
 #ifdef __cplusplus
