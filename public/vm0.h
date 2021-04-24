@@ -70,6 +70,20 @@ struct u7_vm0_instruction u7_vm0_jump_if_i32_negative_or_zero(
     struct u7_vm0_local_label label);
 struct u7_vm0_instruction u7_vm0_jump_if_i32_positive_or_zero(
     struct u7_vm0_local_label label);
+
+struct u7_vm0_instruction u7_vm0_jump_if_i64_zero(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i64_not_zero(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i64_negative(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i64_positive(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i64_negative_or_zero(
+    struct u7_vm0_local_label label);
+struct u7_vm0_instruction u7_vm0_jump_if_i64_positive_or_zero(
+    struct u7_vm0_local_label label);
+
 struct u7_vm0_instruction u7_vm0_jump(struct u7_vm0_local_label label);
 
 struct u7_vm0_instruction u7_vm0_duplicate_i32();
@@ -101,6 +115,9 @@ struct u7_vm0_instruction u7_vm0_inc_i64(int64_t delta);
 struct u7_vm0_instruction u7_vm0_inc_f32(float delta);
 struct u7_vm0_instruction u7_vm0_inc_f64(double delta);
 
+struct u7_vm0_instruction u7_vm0_inc_local_i64(struct u7_vm0_local_variable var,
+                                               int64_t delta);
+
 struct u7_vm0_instruction u7_vm0_add_i32();
 struct u7_vm0_instruction u7_vm0_add_i64();
 struct u7_vm0_instruction u7_vm0_add_f32();
@@ -124,6 +141,9 @@ struct u7_vm0_instruction u7_vm0_floordiv_u64();
 
 struct u7_vm0_instruction u7_vm0_floormod_u32();
 struct u7_vm0_instruction u7_vm0_floormod_u64();
+
+struct u7_vm0_instruction u7_vm0_floormod_local_u64(
+    struct u7_vm0_local_variable lhs, struct u7_vm0_local_variable rhs);
 
 struct u7_vm0_instruction u7_vm0_floor_f32();
 struct u7_vm0_instruction u7_vm0_floor_f64();

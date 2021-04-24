@@ -405,6 +405,78 @@ static bool u7_vm0_jump_if_i32_positive_or_zero_execute(
   return u7_vm_instruction_tail_call(tail, self, state);
 }
 
+static bool u7_vm0_jump_if_i64_zero_execute(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  u7_vm_instruction_enter(tail, self, state);
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i64(&state->stack) == 0) {
+    state->ip += offset;
+  }
+  return u7_vm_instruction_tail_call(tail, self, state);
+}
+
+static bool u7_vm0_jump_if_i64_negative_execute(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  u7_vm_instruction_enter(tail, self, state);
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i64(&state->stack) < 0) {
+    state->ip += offset;
+  }
+  return u7_vm_instruction_tail_call(tail, self, state);
+}
+
+static bool u7_vm0_jump_if_i64_positive_execute(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  u7_vm_instruction_enter(tail, self, state);
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i64(&state->stack) > 0) {
+    state->ip += offset;
+  }
+  return u7_vm_instruction_tail_call(tail, self, state);
+}
+
+static bool u7_vm0_jump_if_i64_not_zero_execute(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  u7_vm_instruction_enter(tail, self, state);
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i64(&state->stack) != 0) {
+    state->ip += offset;
+  }
+  return u7_vm_instruction_tail_call(tail, self, state);
+}
+
+static bool u7_vm0_jump_if_i64_negative_or_zero_execute(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  u7_vm_instruction_enter(tail, self, state);
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i64(&state->stack) <= 0) {
+    state->ip += offset;
+  }
+  return u7_vm_instruction_tail_call(tail, self, state);
+}
+
+static bool u7_vm0_jump_if_i64_positive_or_zero_execute(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  u7_vm_instruction_enter(tail, self, state);
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert((offset >= 0 && state->ip + offset < state->instructions_size) ||
+         (offset < 0 && state->ip >= -(size_t)offset));
+  if (u7_vm_stack_pop_i64(&state->stack) >= 0) {
+    state->ip += offset;
+  }
+  return u7_vm_instruction_tail_call(tail, self, state);
+}
+
 static bool u7_vm0_jump_execute(int tail, struct u7_vm_instruction const* self,
                                 struct u7_vm_state* state) {
   u7_vm_instruction_enter(tail, self, state);
@@ -464,6 +536,60 @@ struct u7_vm0_instruction u7_vm0_jump_if_i32_positive_or_zero(
     struct u7_vm0_local_label label) {
   struct u7_vm0_instruction result = {
       .base = {.execute_fn = &u7_vm0_jump_if_i32_positive_or_zero_execute},
+      .arg1 = {.i64 = label.offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i64_zero(
+    struct u7_vm0_local_label label) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i64_zero_execute},
+      .arg1 = {.i64 = label.offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i64_not_zero(
+    struct u7_vm0_local_label label) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i64_not_zero_execute},
+      .arg1 = {.i64 = label.offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i64_negative(
+    struct u7_vm0_local_label label) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i64_negative_execute},
+      .arg1 = {.i64 = label.offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i64_negative_or_zero(
+    struct u7_vm0_local_label label) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i64_negative_or_zero_execute},
+      .arg1 = {.i64 = label.offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i64_positive(
+    struct u7_vm0_local_label label) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i64_positive_execute},
+      .arg1 = {.i64 = label.offset},
+  };
+  return result;
+}
+
+struct u7_vm0_instruction u7_vm0_jump_if_i64_positive_or_zero(
+    struct u7_vm0_local_label label) {
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_jump_if_i64_positive_or_zero_execute},
       .arg1 = {.i64 = label.offset},
   };
   return result;
@@ -820,6 +946,43 @@ struct u7_vm0_instruction u7_vm0_inc_f64(double delta) {
   return result;
 }
 
+// inc_local
+
+static bool u7_vm0_inc_local_i64_execute(int tail,
+                                         struct u7_vm_instruction const* self,
+                                         struct u7_vm_state* state) {
+  u7_vm_instruction_enter(tail, self, state);
+  int64_t offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  int64_t delta = ((struct u7_vm0_instruction const*)self)->arg2.i64;
+  assert(offset % _Alignof(int64_t) == 0);
+  assert(offset >= 0);
+  assert(offset + sizeof(int64_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  int64_t* p = (int64_t*)u7_vm_memory_add_offset(
+      u7_vm_stack_current_locals(&state->stack), offset);
+  int64_t x = *p;
+  if (__builtin_add_overflow(x, delta, p)) {
+    state->error = u7_errorf(u7_errno_category(), ERANGE,
+                             "integer overflow: u7_vm0_inc_local_i64 x=%" PRId64
+                             ", delta=%" PRId64,
+                             x, delta);
+    return false;
+  }
+  u7_vm_stack_push_i32(&state->stack, *p);
+  return u7_vm_instruction_tail_call(tail, self, state);
+}
+
+struct u7_vm0_instruction u7_vm0_inc_local_i64(struct u7_vm0_local_variable var,
+                                               int64_t delta) {
+  assert(var.offset >= 0);
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_inc_local_i64_execute},
+      .arg1 = {.i64 = var.offset},
+      .arg2 = {.i64 = delta},
+  };
+  return result;
+}
+
 // add
 
 static bool u7_vm0_add_i32_execute(int tail,
@@ -1112,6 +1275,50 @@ static bool u7_vm0_floormod_u64_execute(int tail,
 
 U7_VM0_INSTRUCTION_0(floormod_u32)
 U7_VM0_INSTRUCTION_0(floormod_u64)
+
+// floormod_local
+
+static bool u7_vm0_floormod_local_u64_execute(
+    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state) {
+  u7_vm_instruction_enter(tail, self, state);
+
+  int64_t lhs_offset = ((struct u7_vm0_instruction const*)self)->arg1.i64;
+  assert(lhs_offset % _Alignof(int64_t) == 0);
+  assert(lhs_offset >= 0);
+  assert(lhs_offset + sizeof(int64_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  uint64_t lhs = *(int64_t*)u7_vm_memory_add_offset(
+      u7_vm_stack_current_locals(&state->stack), lhs_offset);
+  int64_t rhs_offset = ((struct u7_vm0_instruction const*)self)->arg2.i64;
+  assert(rhs_offset % _Alignof(int64_t) == 0);
+  assert(rhs_offset >= 0);
+  assert(rhs_offset + sizeof(int64_t) <=
+         u7_vm_stack_current_frame_layout(&state->stack)->locals_size);
+  uint64_t rhs = *(int64_t*)u7_vm_memory_add_offset(
+      u7_vm_stack_current_locals(&state->stack), rhs_offset);
+  if (rhs == 0) {
+    state->error = u7_errorf(
+        u7_errno_category(), ERANGE,
+        "modision by zero: u7_vm0_floormod_u64 lhs=%" PRIu64 ", rhs=%" PRIu64,
+        lhs, rhs);
+    return false;
+  } else {
+    u7_vm_stack_push_i64(&state->stack, (int64_t)(lhs % rhs));
+    return u7_vm_instruction_tail_call(tail, self, state);
+  }
+}
+
+struct u7_vm0_instruction u7_vm0_floormod_local_u64(
+    struct u7_vm0_local_variable lhs, struct u7_vm0_local_variable rhs) {
+  assert(lhs.offset >= 0);
+  assert(rhs.offset >= 0);
+  struct u7_vm0_instruction result = {
+      .base = {.execute_fn = &u7_vm0_floormod_local_u64_execute},
+      .arg1 = {.i64 = lhs.offset},
+      .arg2 = {.i64 = rhs.offset},
+  };
+  return result;
+}
 
 // rounding
 
