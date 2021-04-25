@@ -27,16 +27,25 @@ struct u7_vm_instruction {
 #define u7_vm_instruction_execute(tail, self, state) \
   (tail == 0 || self->execute_fn(tail - 1, self, state))
 
-#define u7_vm_instruction_enter(tail, self, state) \
-  do {                                             \
-    (void)tail;                                    \
-    (void)self;                                    \
-    state->ip += 1;                                \
-  } while (false)
-
-#define u7_vm_instruction_tail_call(tail, self, state)       \
-  ((void)self, assert(state->ip < state->instructions_size), \
-   u7_vm_instruction_execute(tail, state->instructions[state->ip], state))
+// Helper macro.
+#define U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name, self_type)                  \
+  __attribute__((always_inline)) static inline bool fn_name##_impl(        \
+      self_type const* self, struct u7_vm_state* state);                   \
+                                                                           \
+  static bool fn_name(int tail, struct u7_vm_instruction const* self,      \
+                      struct u7_vm_state* state) {                         \
+    state->ip += 1;                                                        \
+    if (!fn_name##_impl((self_type const*)self, state)) {                  \
+      return false;                                                        \
+    }                                                                      \
+    assert(state->ip < state->instructions_size);                          \
+    return u7_vm_instruction_execute(tail, state->instructions[state->ip], \
+                                     state);                               \
+  }                                                                        \
+                                                                           \
+  __attribute__((always_inline)) static inline bool fn_name##_impl(        \
+      __attribute__((unused)) self_type const* self,                       \
+      __attribute__((unused)) struct u7_vm_state* state)
 
 #ifdef __cplusplus
 }  // extern "C"
