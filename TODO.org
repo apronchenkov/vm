@@ -1,12 +1,14 @@
-* DONE u7_error
-  CLOSED: [2021-02-14]
-* DONE u7_str
-  CLOSED: [2021-02-15]
-* DONE u7_str_error(category, code, "Message: %s", messgae)
-  CLOSED: [2021-02-16 Tue 21:27]
 
-* DONE Integrate vm with u7_error
-  CLOSED: [2021-03-18 Thu 23:30]
+* vm
+** DONE u7_error
+   CLOSED: [2021-02-14]
+** DONE u7_str
+   CLOSED: [2021-02-15]
+** DONE u7_str_error(category, code, "Message: %s", messgae)
+   CLOSED: [2021-02-16 Tue 21:27]
+
+** DONE Integrate vm with u7_error
+   CLOSED: [2021-03-18 Thu 23:30]
 ** DONE allocator
    CLOSED: [2021-03-18 Thu 23:29]
 ** DONE stack
@@ -14,29 +16,34 @@
 ** DONE state
    CLOSED: [2021-03-18 Thu 23:29]
 
-* DONE Prototype some trivial operations
+** DONE Prototype some trivial operations
 
 
-* TODO Instructions
-  - [X] inc
-  - [X] neg
+** DONE Instructions
+   - [X] inc
+   - [X] neg
 
-  - [X] compare
+   - [X] compare
 
-  - [X] jump_if_i32_zero
-  - [X] jump_if_i32_negative
-  - [X] jump_if_i32_positive
-  - [X] jump_if_i32_not_zero
-  - [X] jump_if_i32_not_negative
-  - [X] jump_if_i32_not_positive
+   - [X] jump_if_i32_zero
+   - [X] jump_if_i32_negative
+   - [X] jump_if_i32_positive
+   - [X] jump_if_i32_not_zero
+   - [X] jump_if_i32_not_negative
+   - [X] jump_if_i32_not_positive
 
-  - [ ] or
-  - [ ] and
-  - [ ] not
-  - [ ] xor
+   - [X] or
+   - [X] and
+   - [X] not
+   - [X] xor
 
-* TODO Declare local variables
-* TODO labels
+
+** TODO Declare local variables
+** TODO labels
+
+** CANCELLED u7_ostreambuf
+** CANCELLED u7_vm_repr?
+** CANCELLED u7_vm_type
 
 * TODO u7_ostreambuf
 * TODO u7_vm_repr?

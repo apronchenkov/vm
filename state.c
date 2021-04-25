@@ -21,7 +21,7 @@ void u7_vm_state_destroy(struct u7_vm_state* self) {
 }
 
 void u7_vm_state_run(struct u7_vm_state* self) {
-  const int kTail = 8;
+  const int kTail = 16;
   if (!self->error.error_code) {
     do {
       assert(self->ip < self->instructions_size);

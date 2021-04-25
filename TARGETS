@@ -3,8 +3,6 @@ cc_library(
     headers=[
         'public/allocator.h',
         'public/instruction.h',
-        'public/memory.h',
-        'public/memory_layout.h',
         'public/memory_utils.h',
         'public/stack.h',
         'public/stack_push_pop.h',
