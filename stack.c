@@ -49,11 +49,13 @@ u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity) {
   void* memory;
   U7_RETURN_IF_ERROR(u7_vm_allocator_alloc(self->allocator, capacity, &memory));
   assert(u7_vm_memory_is_aligned(memory, kU7VmDefaultAlignment));
-  memcpy(memory, self->memory, self->top_offset);
-  struct u7_vm_stack_reserve_visitor_arg a = {.old_memory = self->memory,
-                                              .new_memory = memory};
-  u7_vm_stack_iterate(self, &a, u7_vm_stack_reserve_visitor);
-  u7_vm_allocator_free(self->allocator, self->memory);
+  if (self->memory) {
+    memcpy(memory, self->memory, self->top_offset);
+    struct u7_vm_stack_reserve_visitor_arg a = {.old_memory = self->memory,
+                                                .new_memory = memory};
+    u7_vm_stack_iterate(self, &a, u7_vm_stack_reserve_visitor);
+    u7_vm_allocator_free(self->allocator, self->memory);
+  }
   self->memory = memory;
   self->capacity = capacity;
   return u7_ok();

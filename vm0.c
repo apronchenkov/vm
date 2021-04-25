@@ -968,7 +968,7 @@ static bool u7_vm0_inc_local_i64_execute(int tail,
                              x, delta);
     return false;
   }
-  u7_vm_stack_push_i32(&state->stack, *p);
+  u7_vm_stack_push_i64(&state->stack, *p);
   return u7_vm_instruction_tail_call(tail, self, state);
 }
 
