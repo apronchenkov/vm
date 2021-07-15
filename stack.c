@@ -67,7 +67,7 @@ u7_error u7_vm_stack_push_frame(
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(frame_layout->locals_size % U7_VM_DEFAULT_ALIGNMENT == 0);
   U7_RETURN_IF_ERROR(u7_vm_stack_reserve(
-      self, self->top_offset + kU7VmStackFrameHeaderSize +
+      self, self->top_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
                 frame_layout->locals_size + frame_layout->extra_capacity));
   struct u7_vm_stack_frame_header* const frame_header =
       u7_vm_memory_add_offset(self->memory, self->top_offset);
@@ -76,11 +76,11 @@ u7_error u7_vm_stack_push_frame(
   if (frame_layout->init_fn) {
     frame_layout->init_fn(
         frame_layout,
-        u7_vm_memory_add_offset(self->memory,
-                                self->top_offset + kU7VmStackFrameHeaderSize));
+        u7_vm_memory_add_offset(
+            self->memory, self->top_offset + U7_VM_STACK_FRAME_HEADER_SIZE));
   }
   self->base_offset = self->top_offset;
-  self->top_offset += kU7VmStackFrameHeaderSize + frame_layout->locals_size;
+  self->top_offset += U7_VM_STACK_FRAME_HEADER_SIZE + frame_layout->locals_size;
   return u7_ok();
 }
 
@@ -100,8 +100,8 @@ void u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
   if (frame_layout->uninit_fn) {
     frame_layout->uninit_fn(
         frame_layout,
-        u7_vm_memory_add_offset(self->memory,
-                                self->base_offset + kU7VmStackFrameHeaderSize));
+        u7_vm_memory_add_offset(
+            self->memory, self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE));
   }
   self->top_offset = self->base_offset;
   self->base_offset = frame_header.old_base_offset;
@@ -119,9 +119,10 @@ void u7_vm_stack_iterate(struct u7_vm_stack* self, void* arg,
     struct u7_vm_stack_frame_header const frame_header =
         *(struct u7_vm_stack_frame_header*)u7_vm_memory_add_offset(self->memory,
                                                                    base_offset);
-    if (!visitor(arg, frame_header.frame_layout,
-                 u7_vm_memory_add_offset(
-                     self->memory, base_offset + kU7VmStackFrameHeaderSize))) {
+    if (!visitor(
+            arg, frame_header.frame_layout,
+            u7_vm_memory_add_offset(
+                self->memory, base_offset + U7_VM_STACK_FRAME_HEADER_SIZE))) {
       break;
     }
     top_offset = base_offset;

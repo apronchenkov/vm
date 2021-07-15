@@ -44,7 +44,7 @@ struct u7_vm_stack_frame_header {
 };
 
 enum {
-  kU7VmStackFrameHeaderSize =
+  U7_VM_STACK_FRAME_HEADER_SIZE =
       (sizeof(struct u7_vm_stack_frame_header) + U7_VM_DEFAULT_ALIGNMENT - 1) &
       -(size_t)U7_VM_DEFAULT_ALIGNMENT
 };
@@ -111,10 +111,10 @@ u7_vm_stack_current_frame_layout(struct u7_vm_stack* self) {
 static inline void* u7_vm_stack_current_locals(struct u7_vm_stack* self) {
   assert(self->base_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size);
-  return u7_vm_memory_add_offset(self->memory,
-                                 self->base_offset + kU7VmStackFrameHeaderSize);
+  return u7_vm_memory_add_offset(
+      self->memory, self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE);
 }
 
 #ifdef __cplusplus

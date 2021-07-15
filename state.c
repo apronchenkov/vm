@@ -31,5 +31,6 @@ void u7_vm_state_run(struct u7_vm_state* self) {
 }
 
 void* u7_vm_state_static_frame(struct u7_vm_state* self) {
-  return u7_vm_memory_add_offset(self->stack.memory, kU7VmStackFrameHeaderSize);
+  return u7_vm_memory_add_offset(self->stack.memory,
+                                 U7_VM_STACK_FRAME_HEADER_SIZE);
 }

@@ -58,7 +58,7 @@ static inline void u7_vm_stack_push_f64(struct u7_vm_stack* self,
 static inline int32_t u7_vm_stack_pop_i32(struct u7_vm_stack* self) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size +
              u7_vm_align_size(sizeof(int32_t), U7_VM_DEFAULT_ALIGNMENT));
   self->top_offset -=
@@ -70,7 +70,7 @@ static inline int32_t u7_vm_stack_pop_i32(struct u7_vm_stack* self) {
 static inline int64_t u7_vm_stack_pop_i64(struct u7_vm_stack* self) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size +
              u7_vm_align_size(sizeof(int64_t), U7_VM_DEFAULT_ALIGNMENT));
   self->top_offset -=
@@ -82,7 +82,7 @@ static inline int64_t u7_vm_stack_pop_i64(struct u7_vm_stack* self) {
 static inline float u7_vm_stack_pop_f32(struct u7_vm_stack* self) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size +
              u7_vm_align_size(sizeof(float), U7_VM_DEFAULT_ALIGNMENT));
   self->top_offset -= u7_vm_align_size(sizeof(float), U7_VM_DEFAULT_ALIGNMENT);
@@ -93,7 +93,7 @@ static inline float u7_vm_stack_pop_f32(struct u7_vm_stack* self) {
 static inline double u7_vm_stack_pop_f64(struct u7_vm_stack* self) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size +
              u7_vm_align_size(sizeof(double), U7_VM_DEFAULT_ALIGNMENT));
   self->top_offset -= u7_vm_align_size(sizeof(double), U7_VM_DEFAULT_ALIGNMENT);
@@ -104,7 +104,7 @@ static inline double u7_vm_stack_pop_f64(struct u7_vm_stack* self) {
 static inline int32_t* u7_vm_stack_peek_i32(struct u7_vm_stack* self) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size +
              u7_vm_align_size(sizeof(int32_t), U7_VM_DEFAULT_ALIGNMENT));
   return (int32_t*)u7_vm_memory_add_offset(
@@ -117,7 +117,7 @@ static inline int32_t* u7_vm_stack_peek_i32(struct u7_vm_stack* self) {
 static inline int64_t* u7_vm_stack_peek_i64(struct u7_vm_stack* self) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size +
              u7_vm_align_size(sizeof(int64_t), U7_VM_DEFAULT_ALIGNMENT));
   return (int64_t*)u7_vm_memory_add_offset(
@@ -130,7 +130,7 @@ static inline int64_t* u7_vm_stack_peek_i64(struct u7_vm_stack* self) {
 static inline float* u7_vm_stack_peek_f32(struct u7_vm_stack* self) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size +
              u7_vm_align_size(sizeof(float), U7_VM_DEFAULT_ALIGNMENT));
   return (float*)u7_vm_memory_add_offset(
@@ -143,7 +143,7 @@ static inline float* u7_vm_stack_peek_f32(struct u7_vm_stack* self) {
 static inline double* u7_vm_stack_peek_f64(struct u7_vm_stack* self) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
-         self->base_offset + kU7VmStackFrameHeaderSize +
+         self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
              u7_vm_stack_current_frame_layout(self)->locals_size +
              u7_vm_align_size(sizeof(double), U7_VM_DEFAULT_ALIGNMENT));
   return (double*)u7_vm_memory_add_offset(
