@@ -23,7 +23,7 @@ typedef void (*u7_vm_allocator_free_fn_t)(struct u7_vm_allocator* self,
 // This struct doesn't represent ownership: no standard way to
 // copy/move it, nor to destroy it.
 struct u7_vm_allocator {
-  int alignment;
+  int alignment;  // read-only
   u7_vm_allocator_alloc_fn_t alloc_fn;
   u7_vm_allocator_free_fn_t free_fn;
 };

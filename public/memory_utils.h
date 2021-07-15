@@ -14,8 +14,7 @@ extern "C" {
 #endif  // __cplusplus
 
 enum {
-  kU7VmDefaultAlignment = u7_vm_alignof(void*),
-  kU7VmStandardAlignment = u7_vm_alignof(long double),
+  U7_VM_DEFAULT_ALIGNMENT = u7_vm_alignof(void*),
 };
 
 static inline size_t u7_vm_align_size(size_t size, int alignment) {

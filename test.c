@@ -9,7 +9,7 @@ u7_error Main() {
   };
   struct u7_vm_stack_frame_layout statics_layout = {
       .locals_size =
-          u7_vm_align_size(sizeof(struct statics), kU7VmDefaultAlignment),
+          u7_vm_align_size(sizeof(struct statics), U7_VM_DEFAULT_ALIGNMENT),
       .extra_capacity = 64,
       .description = "statics",
   };

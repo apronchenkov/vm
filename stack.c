@@ -48,7 +48,7 @@ u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity) {
   }
   void* memory;
   U7_RETURN_IF_ERROR(u7_vm_allocator_alloc(self->allocator, capacity, &memory));
-  assert(u7_vm_memory_is_aligned(memory, kU7VmDefaultAlignment));
+  assert(u7_vm_memory_is_aligned(memory, U7_VM_DEFAULT_ALIGNMENT));
   if (self->memory) {
     memcpy(memory, self->memory, self->top_offset);
     struct u7_vm_stack_reserve_visitor_arg a = {.old_memory = self->memory,
@@ -64,8 +64,8 @@ u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity) {
 u7_error u7_vm_stack_push_frame(
     struct u7_vm_stack* self,
     struct u7_vm_stack_frame_layout const* frame_layout) {
-  assert(self->top_offset % kU7VmDefaultAlignment == 0);
-  assert(frame_layout->locals_size % kU7VmDefaultAlignment == 0);
+  assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
+  assert(frame_layout->locals_size % U7_VM_DEFAULT_ALIGNMENT == 0);
   U7_RETURN_IF_ERROR(u7_vm_stack_reserve(
       self, self->top_offset + kU7VmStackFrameHeaderSize +
                 frame_layout->locals_size + frame_layout->extra_capacity));
@@ -88,7 +88,7 @@ void u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
   size_t base_offset = self->base_offset;
   size_t top_offset = self->top_offset;
   (void)top_offset;
-  assert(base_offset % kU7VmDefaultAlignment == 0);
+  assert(base_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(top_offset >= base_offset + sizeof(struct u7_vm_stack_frame_header));
   struct u7_vm_stack_frame_header const frame_header =
       *(struct u7_vm_stack_frame_header*)u7_vm_memory_add_offset(self->memory,
@@ -96,7 +96,7 @@ void u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
   struct u7_vm_stack_frame_layout const* const frame_layout =
       frame_header.frame_layout;
   assert(top_offset >=
-         base_offset + kU7VmDefaultAlignment + frame_layout->locals_size);
+         base_offset + U7_VM_DEFAULT_ALIGNMENT + frame_layout->locals_size);
   if (frame_layout->uninit_fn) {
     frame_layout->uninit_fn(
         frame_layout,
@@ -113,8 +113,8 @@ void u7_vm_stack_iterate(struct u7_vm_stack* self, void* arg,
   size_t top_offset = self->top_offset;
   while (base_offset != top_offset) {
     assert(base_offset < top_offset);
-    assert(base_offset % kU7VmDefaultAlignment == 0);
-    assert(top_offset % kU7VmDefaultAlignment == 0);
+    assert(base_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
+    assert(top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
     assert(top_offset - base_offset >= sizeof(struct u7_vm_stack_frame_header));
     struct u7_vm_stack_frame_header const frame_header =
         *(struct u7_vm_stack_frame_header*)u7_vm_memory_add_offset(self->memory,
