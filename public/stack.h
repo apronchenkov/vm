@@ -23,6 +23,9 @@ typedef void (*u7_vm_stack_frame_layout_uninit_fn_t)(
     struct u7_vm_stack_frame_layout const* self, void* memory);
 
 // Relocates the stack frame.
+//
+// NOTE: This function does postprocessing after memmove(), means it's safe to
+// assume that "bytes" in source and destination has been already copied.
 typedef void (*u7_vm_stack_frame_layout_relocate_fn_t)(
     struct u7_vm_stack_frame_layout const* self, void* source,
     void* destination);
