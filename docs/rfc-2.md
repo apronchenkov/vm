@@ -10,10 +10,13 @@ Stack Frame consists of two parts:
 
 A stack frame may have the following utility functions associated with it:
  * `init_fn` prepares the regular part for the usage (e.g. construct predefined values, allocates resources)
- * `uninit_fn` releases resources associated with the stack frame
+ * `deinit_fn` releases resources associated with the stack frame
  * `post_memcpy_fn` postprocessing for the stack frame's memory region after it was `memmove`'d to a new address (needed for stack memory reallocation)
 
 These functions likely manipulate only with the regular part of the stack frame.
+
+TODO(apronchenkov): Find a way to avoid moving data during the stack capacity allocations. The primary issue is that it's technically hard to handle the irregular values during the reallocation. Although, such a change may not help with
+deinitialization for the irregular values.
 
 
 ## Stack reallocation
