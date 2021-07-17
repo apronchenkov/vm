@@ -11,12 +11,13 @@ Stack Frame consists of two parts:
 A stack frame may have the following utility functions associated with it:
  * `init_fn` prepares the regular part for the usage (e.g. construct predefined values, allocates resources)
  * `deinit_fn` releases resources associated with the stack frame
- * `post_memcpy_fn` postprocessing for the stack frame's memory region after it was `memmove`'d to a new address (needed for stack memory reallocation)
+ * `post_realloc_fn` postprocessing for the stack frame after it was reallocated to a new address (needed for stack memory reallocation)
 
 These functions likely manipulate only with the regular part of the stack frame.
 
-TODO(apronchenkov): Find a way to avoid moving data during the stack capacity allocations. The primary issue is that it's technically hard to handle the irregular values during the reallocation. Although, such a change may not help with
-deinitialization for the irregular values.
+**TODO(GH-1)**: Stack capacity increase without moving stack frames' data.\
+It's hard to implement reallocation for irregular values in stack frames correctly. So it would be best if our users don't need to care about it.\
+_HOLD:_ There is a similar issue with the deinitialization of the irregular values. If the user still has to track the irregular values for the proper deinitialization, the win from no-reallocation handling becomes much less crucial.
 
 
 ## Stack reallocation

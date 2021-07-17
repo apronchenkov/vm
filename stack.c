@@ -30,8 +30,8 @@ static bool u7_vm_stack_reserve_visitor(
     void* frame_ptr) {
   struct u7_vm_stack_reserve_visitor_arg a =
       *(struct u7_vm_stack_reserve_visitor_arg*)arg;
-  if (frame_layout->relocate_fn) {
-    frame_layout->relocate_fn(
+  if (frame_layout->post_realloc_fn) {
+    frame_layout->post_realloc_fn(
         frame_layout, frame_ptr,
         u7_vm_memory_add_offset(
             a.new_memory, u7_vm_memory_byte_distance(a.old_memory, frame_ptr)));
@@ -97,8 +97,8 @@ void u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
       frame_header.frame_layout;
   assert(top_offset >=
          base_offset + U7_VM_DEFAULT_ALIGNMENT + frame_layout->locals_size);
-  if (frame_layout->uninit_fn) {
-    frame_layout->uninit_fn(
+  if (frame_layout->deinit_fn) {
+    frame_layout->deinit_fn(
         frame_layout,
         u7_vm_memory_add_offset(
             self->memory, self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE));

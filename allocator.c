@@ -24,7 +24,7 @@ static void u7_vm_default_allocator_free(struct u7_vm_allocator* self,
 
 struct u7_vm_allocator* u7_vm_default_allocator() {
   static struct u7_vm_allocator result = {
-      .alignment = kU7VmStandardAlignment,
+      .alignment = u7_vm_alignof(long double),
       .alloc_fn = &u7_vm_default_allocator_alloc,
       .free_fn = &u7_vm_default_allocator_free,
   };
