@@ -22,6 +22,10 @@ typedef void (*u7_vm_allocator_free_fn_t)(struct u7_vm_allocator* self,
 //
 // This struct doesn't represent ownership: no standard way to
 // copy/move it, nor to destroy it.
+//
+// For the scope u7_vm library, it's expected that the user provides an
+// allocator for u7_vm_state_init(), and keeps it alive at least until
+// u7_vm_state_destroy() call.
 struct u7_vm_allocator {
   int alignment;  // read-only
   u7_vm_allocator_alloc_fn_t alloc_fn;
