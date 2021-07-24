@@ -3,7 +3,6 @@
 #include <assert.h>
 
 u7_error u7_vm_state_init(struct u7_vm_state* self,
-                          struct u7_vm_allocator* stack_allocator,
                           struct u7_vm_stack_frame_layout const* statics_layout,
                           struct u7_vm_instruction const** instructions,
                           size_t instructions_size) {
@@ -11,7 +10,7 @@ u7_error u7_vm_state_init(struct u7_vm_state* self,
   self->instructions = instructions;
   self->instructions_size = instructions_size;
   self->ip = 0;
-  u7_vm_stack_init(&self->stack, stack_allocator);
+  u7_vm_stack_init(&self->stack);
   return u7_vm_stack_push_frame(&self->stack, statics_layout);
 }
 

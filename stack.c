@@ -3,21 +3,22 @@
 #include "@/public/memory_utils.h"
 
 #include <assert.h>
+#include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 
-void u7_vm_stack_init(struct u7_vm_stack* self,
-                      struct u7_vm_allocator* allocator) {
+void u7_vm_stack_init(struct u7_vm_stack* self) {
   self->memory = NULL;
   self->base_offset = 0;
   self->top_offset = 0;
   self->capacity = 0;
-  self->allocator = allocator;
 }
 
 void u7_vm_stack_destroy(struct u7_vm_stack* self) {
   while (self->base_offset != self->top_offset) {
     u7_vm_stack_pop_frame(self);
   }
+  free(self->memory);
 }
 
 struct u7_vm_stack_reserve_visitor_arg {
@@ -46,15 +47,19 @@ u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity) {
   if (capacity < 3 * self->capacity / 2) {
     capacity = 3 * self->capacity / 2;
   }
-  void* memory;
-  U7_RETURN_IF_ERROR(u7_vm_allocator_alloc(self->allocator, capacity, &memory));
+  void* memory = malloc(capacity);
+  if (memory == NULL) {
+    return u7_errnof(ENOMEM,
+                     "u7_vm_stack_reserve: malloc(%zu): not enough memory",
+                     capacity);
+  }
   assert(u7_vm_memory_is_aligned(memory, U7_VM_DEFAULT_ALIGNMENT));
   if (self->memory) {
     memcpy(memory, self->memory, self->top_offset);
     struct u7_vm_stack_reserve_visitor_arg a = {.old_memory = self->memory,
                                                 .new_memory = memory};
     u7_vm_stack_iterate(self, &a, u7_vm_stack_reserve_visitor);
-    u7_vm_allocator_free(self->allocator, self->memory);
+    free(self->memory);
   }
   self->memory = memory;
   self->capacity = capacity;

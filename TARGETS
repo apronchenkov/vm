@@ -1,7 +1,6 @@
 cc_library(
     name='vm',
     headers=[
-        'public/allocator.h',
         'public/instruction.h',
         'public/memory_utils.h',
         'public/stack.h',
@@ -10,7 +9,6 @@ cc_library(
         'public/vm0.h',
     ],
     srcs=[
-        'allocator.c',
         'stack.c',
         'state.c',
         'vm0.c',

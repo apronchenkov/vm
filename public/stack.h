@@ -1,9 +1,9 @@
 #ifndef U7_VM_STACK_H_
 #define U7_VM_STACK_H_
 
-#include "@/public/allocator.h"
 #include "@/public/memory_utils.h"
 
+#include <github.com/apronchenkov/error/public/error.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -69,7 +69,6 @@ struct u7_vm_stack {
   size_t base_offset;  // offset to the frame base
   size_t top_offset;   // offset to the stack top
   size_t capacity;     // offset to the stack end
-  struct u7_vm_allocator* allocator;
 };
 
 // False -- stops iteration.
@@ -78,8 +77,7 @@ typedef bool (*u7_vm_stack_visitor_fn_t)(
     void* frame_ptr);
 
 // Initializes the stack structure.
-void u7_vm_stack_init(struct u7_vm_stack* self,
-                      struct u7_vm_allocator* allocator);
+void u7_vm_stack_init(struct u7_vm_stack* self);
 
 // Releases stack resources.
 void u7_vm_stack_destroy(struct u7_vm_stack* self);

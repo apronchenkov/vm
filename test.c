@@ -33,8 +33,7 @@ u7_error Main() {
     js[i] = &is[i].base;
   }
 
-  U7_RETURN_IF_ERROR(u7_vm_state_init(&state, u7_vm_default_allocator(),
-                                      &statics_layout, &js[0],
+  U7_RETURN_IF_ERROR(u7_vm_state_init(&state, &statics_layout, &js[0],
                                       sizeof(js) / sizeof(js[0])));
   u7_vm_state_run(&state);
   u7_error result = u7_error_acquire(state.error);
