@@ -3,11 +3,18 @@
 
 #include "@/public/instruction.h"
 
+#include <github.com/apronchenkov/error/public/error.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
+
+struct u7_vm0_globals {
+  u7_error error;
+};
+
+struct u7_vm_stack_frame_layout const* const u7_vm0_stack_frame_layout;
 
 union u7_vm0_value {
   int32_t i32;

@@ -1,4 +1,4 @@
-# RFC-2: Memory Allocator
+# RFC-3: Memory Allocator
 
 Status: draft
 

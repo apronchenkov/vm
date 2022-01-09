@@ -12,6 +12,14 @@ struct u7_vm_state;
 struct u7_vm_instruction;
 
 // Executes the instruction.
+//
+// Args:
+//   tail: Tail counter; zero value signals that the instruction should avoid
+//     calling the next instrution internally.
+//   self: Pointer to the instruction struct.
+//   state: Execution state.
+//
+// Returns `false` indicates that the execution should be stoped.
 typedef bool (*u7_vm_instruction_execute_fn_t)(
     int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state);
 
