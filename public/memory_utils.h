@@ -17,9 +17,8 @@ enum {
   U7_VM_DEFAULT_ALIGNMENT = u7_vm_alignof(void*),
 };
 
-static inline size_t u7_vm_align_size(size_t size, int alignment) {
-  return (size + alignment - 1) & (-(size_t)alignment);
-}
+#define u7_vm_align_size(size, alignment) \
+  (((size_t)(size) + (size_t)(alignment)-1) & (-(size_t)alignment))
 
 // Returns the first aligned address.
 static inline void* u7_vm_align_memory(void* ptr, int alignment) {
