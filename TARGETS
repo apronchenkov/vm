@@ -6,12 +6,10 @@ cc_library(
         'public/stack.h',
         'public/stack_push_pop.h',
         'public/state.h',
-        'public/vm0.h',
     ],
     srcs=[
         'stack.c',
         'state.c',
-        'vm0.c',
     ],
     deps=[
         '//github.com/apronchenkov/error:error',

@@ -8,17 +8,20 @@
 
 #ifdef __cplusplus
 extern "C" {
+#endif  // __cplusplus
+
+#ifdef __cplusplus
 #define u7_vm_alignof(T) (alignof(T))
 #else
 #define u7_vm_alignof(T) (_Alignof(T))
 #endif  // __cplusplus
 
+#define u7_vm_align_size(size, alignment) \
+  (((size_t)(size) + (size_t)(alignment)-1) & (-(size_t)alignment))
+
 enum {
   U7_VM_DEFAULT_ALIGNMENT = u7_vm_alignof(void*),
 };
-
-#define u7_vm_align_size(size, alignment) \
-  (((size_t)(size) + (size_t)(alignment)-1) & (-(size_t)alignment))
 
 // Returns the first aligned address.
 static inline void* u7_vm_align_memory(void* ptr, int alignment) {
