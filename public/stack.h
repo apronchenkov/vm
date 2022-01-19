@@ -80,9 +80,6 @@ void u7_vm_stack_init(struct u7_vm_stack* self);
 // Releases stack resources.
 void u7_vm_stack_destroy(struct u7_vm_stack* self);
 
-// Reserves the stack memory.
-u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity);
-
 // Returns a pointer to the new stack frame.
 u7_error u7_vm_stack_push_frame(
     struct u7_vm_stack* self,

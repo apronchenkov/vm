@@ -16,6 +16,12 @@ extern "C" {
 #define u7_vm_alignof(T) (_Alignof(T))
 #endif  // __cplusplus
 
+#ifdef __cplusplus
+#define u7_vm_offsetof(st, m) (offsetof(st, m))
+#else
+#define u7_vm_offsetof(st, m) ((size_t)((char*)&((st*)NULL)->m - (char*)NULL))
+#endif  // __cplusplus
+
 #define u7_vm_align_size(size, alignment) \
   (((size_t)(size) + (size_t)(alignment)-1) & (-(size_t)alignment))
 

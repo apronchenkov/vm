@@ -40,7 +40,7 @@ static bool u7_vm_stack_reserve_visitor(
   return true;
 }
 
-u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity) {
+static u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity) {
   if (self->capacity >= capacity) {
     return u7_ok();
   }
