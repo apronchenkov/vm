@@ -3,7 +3,7 @@
 
 #include "@/public/memory_utils.h"
 
-#include <github.com/apronchenkov/error/public/error.h>
+#include <github.com/apronchenkov/u7_init/public/init.h>
 #include <stdbool.h>
 #include <stddef.h>
 

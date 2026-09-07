@@ -12,17 +12,6 @@ cc_library(
         'state.c',
     ],
     deps=[
-        '//github.com/apronchenkov/error:error',
-    ],
-)
-
-cc_binary(
-    name='test',
-    srcs=[
-        'test.c',
-    ],
-    deps=[
-        ':vm',
-        '//github.com/apronchenkov/error:error',
+        '//github.com/apronchenkov/u7_init:u7_init',
     ],
 )
