@@ -18,9 +18,7 @@ void u7_vm_state_destroy(struct u7_vm_state* self) {
 }
 
 void u7_vm_state_run(struct u7_vm_state* self) {
-  const int kTail = 16;
   do {
     assert(self->ip < self->instructions_size);
-  } while (
-      u7_vm_instruction_execute(kTail, self->instructions[self->ip], self));
+  } while (u7_vm_instruction_execute(self->instructions[self->ip], self));
 }

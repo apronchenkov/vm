@@ -14,14 +14,13 @@ struct u7_vm_instruction;
 // Executes the instruction.
 //
 // Args:
-//   tail: Tail counter; zero value signals that the instruction should avoid
-//     calling the next instrution internally.
 //   self: Pointer to the instruction struct.
 //   state: Execution state.
 //
-// Returns `false` indicates that the execution should be stoped.
+// Returns:
+//   False if the instruction chain should stop.
 typedef bool (*u7_vm_instruction_execute_fn_t)(
-    int tail, struct u7_vm_instruction const* self, struct u7_vm_state* state);
+    struct u7_vm_instruction const* self, struct u7_vm_state* state);
 
 // This struct declares the usage API of a VM Instruction.
 //
@@ -32,27 +31,62 @@ struct u7_vm_instruction {
 };
 
 // Executes the instruction within the given state.
-#define u7_vm_instruction_execute(tail, self, state) \
-  (tail == 0 || self->execute_fn(tail - 1, self, state))
+#define u7_vm_instruction_execute(self, state) (self->execute_fn(self, state))
 
-// Helper macro.
-#define U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name, self_type)                  \
-  __attribute__((always_inline)) static inline bool fn_name##_impl(        \
-      self_type const* self, struct u7_vm_state* state);                   \
-                                                                           \
-  static bool fn_name(int tail, struct u7_vm_instruction const* self,      \
-                      struct u7_vm_state* state) {                         \
-    state->ip += 1;                                                        \
-    if (!fn_name##_impl((self_type const*)self, state)) {                  \
-      return false;                                                        \
-    }                                                                      \
-    assert(state->ip < state->instructions_size);                          \
-    return u7_vm_instruction_execute(tail, state->instructions[state->ip], \
-                                     state);                               \
-  }                                                                        \
-                                                                           \
-  __attribute__((always_inline)) static inline bool fn_name##_impl(        \
-      __attribute__((unused)) self_type const* self,                       \
+// Defines an instruction's execute method `fn_name(self, state)`.
+//
+// If the instruction body returns false, execution stops immediately and
+// `state->ip` is left unchanged. Otherwise, `state->ip` is advanced and
+// execution continues with the next instruction.
+//
+// NOTE: Avoid using this macro for instructions that modify `state->ip`, such
+// as jumps, calls, or returns. Doing so would result in multiple updates to
+// `state->ip` and may hurt performance. Define such execute methods manually
+// instead -- see U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT below.
+#define U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name, self_type)           \
+  __attribute__((always_inline)) static inline bool fn_name##_impl( \
+      self_type const* self, struct u7_vm_state* state);            \
+                                                                    \
+  static bool fn_name(struct u7_vm_instruction const* self,         \
+                      struct u7_vm_state* state) {                  \
+    if (!fn_name##_impl((self_type const*)self, state)) {           \
+      return false;                                                 \
+    }                                                               \
+    state->ip += 1;                                                 \
+    assert(state->ip < state->instructions_size);                   \
+    __attribute__((musttail)) return u7_vm_instruction_execute(     \
+        state->instructions[state->ip], state);                     \
+  }                                                                 \
+                                                                    \
+  __attribute__((always_inline)) static inline bool fn_name##_impl( \
+      __attribute__((unused)) self_type const* self,                \
+      __attribute__((unused)) struct u7_vm_state* state)
+
+// Defines an instruction's execute method `fn_name(self, state)` for
+// instructions that manage `state->ip` explicitly.
+//
+// Unlike U7_VM_DEFINE_INSTRUCTION_EXEC, this macro does not advance
+// `state->ip`. If the instruction body returns true, `state->ip` must point
+// to the instruction to execute next. If the body returns false, execution
+// stops and `state->ip` is left as set by the body.
+//
+// This is intended for jumps, calls, returns, and terminal instructions.
+#define U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(fn_name, self_type)  \
+  __attribute__((always_inline)) static inline bool fn_name##_impl( \
+      self_type const* self, struct u7_vm_state* state);            \
+                                                                    \
+  static bool fn_name(struct u7_vm_instruction const* self,         \
+                      struct u7_vm_state* state) {                  \
+    if (!fn_name##_impl((self_type const*)self, state)) {           \
+      return false;                                                 \
+    }                                                               \
+    assert(state->ip < state->instructions_size);                   \
+    __attribute__((musttail)) return u7_vm_instruction_execute(     \
+        state->instructions[state->ip], state);                     \
+  }                                                                 \
+                                                                    \
+  __attribute__((always_inline)) static inline bool fn_name##_impl( \
+      __attribute__((unused)) self_type const* self,                \
       __attribute__((unused)) struct u7_vm_state* state)
 
 #ifdef __cplusplus
