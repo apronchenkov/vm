@@ -1,6 +1,7 @@
 cc_library(
     name='vm',
     headers=[
+        'public/allocator.h',
         'public/instruction.h',
         'public/memory_utils.h',
         'public/stack.h',
@@ -8,10 +9,36 @@ cc_library(
         'public/state.h',
     ],
     srcs=[
+        'allocator.c',
         'stack.c',
         'state.c',
     ],
     deps=[
+        '//github.com/apronchenkov/u7_init:u7_init',
+    ],
+)
+
+cc_library(
+    name='test_allocator',
+    headers=[
+        'test_allocator.h',
+    ],
+    srcs=[
+        'test_allocator.c',
+    ],
+    deps=[
+        ':vm',
+    ],
+)
+
+cc_test(
+    name='allocator_test',
+    srcs=[
+        'allocator_test.c',
+    ],
+    deps=[
+        ':test_allocator',
+        '//github.com/apronchenkov/u7_init:testing',
         '//github.com/apronchenkov/u7_init:u7_init',
     ],
 )
