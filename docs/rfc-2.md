@@ -2,6 +2,8 @@
 
 Status: draft
 
+> Superseded by RFC-11 (Building Blocks). Kept for history.
+
 ## Stack Frame
 
 Stack Frame consists of two parts:
@@ -15,14 +17,34 @@ A stack frame may have the following utility functions associated with it:
 
 These functions likely manipulate only with the regular part of the stack frame.
 
-**TODO(GH-1)**: Stack capacity increase without moving stack frames' data.\
-It's hard to implement reallocation for irregular values in stack frames correctly. So it would be best if our users don't need to care about it.\
-_HOLD:_ There is a similar issue with the deinitialization of the irregular values. If the user still has to track the irregular values for the proper deinitialization, the win from no-reallocation handling becomes much less crucial.
+**Resolved (GH-1)**: stack frame values are expected to be trivially
+relocatable -- movable to a new address via a plain byte copy, with no
+per-value fixup needed. This is the same property proposed for the C++
+standard library as "trivially relocatable" (WG21 P1144). Many
+standard-library types, such as `std::vector`, `std::unique_ptr`, and
+`std::shared_ptr`, are trivially relocatable in practice because they
+contain no self-references. This suggests that the requirement is not
+overly restrictive. `std::string` is a notable counterexample because of
+the small-string optimization.
+
+For a value that genuinely isn't trivially relocatable, the pattern is to
+store it on the heap and keep only a pointer to it on the stack, so the
+stack's own move never has to touch it.
 
 
 ## Stack reallocation
 
 Stack is represented by a continuous memory region, a part of which can be currently unused.
+
+The initial allocation is a configuration choice, not a maximum stack size.
+Pushing a frame grows the allocation geometrically when the existing capacity
+cannot hold the frame header, fixed locals, and the frame's declared extra
+capacity. Growth may move the complete stack allocation. Persistent references
+to stack data must therefore be offsets; pointers returned by stack accessors
+remain valid only until an operation that can push a frame or grow the stack.
+
+A failed growth leaves the old allocation, capacity, offsets, frames, and
+frame contents unchanged.
 
 The total amount of memory allocated for that stack is _capacity_. _Top_ points to the first _unused_ address in the stack. When we need to push something to the stack, we write it to the _top_ location and modify _top_ to point after the newly written value.
 
