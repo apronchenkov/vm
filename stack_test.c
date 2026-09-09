@@ -1,0 +1,74 @@
+#include "@/public/stack.h"
+
+#include <github.com/apronchenkov/u7_init/public/testing.h>
+#include <stddef.h>
+
+struct collect_layouts_arg {
+  struct u7_vm_stack_frame_layout const* visited[8];
+  size_t visited_size;
+};
+
+static bool collect_layouts(void* arg,
+                            struct u7_vm_stack_frame_layout const* layout,
+                            void* frame_ptr) {
+  (void)frame_ptr;
+  struct collect_layouts_arg* self = arg;
+  U7_ASSERT(self->visited_size < 8);
+  self->visited[self->visited_size] = layout;
+  self->visited_size += 1;
+  return true;
+}
+
+U7_TEST(test_iterate_visits_every_frame_outward) {
+  struct u7_vm_stack_frame_layout root_layout = {.description = "root"};
+  struct u7_vm_stack_frame_layout frame1_layout = {.description = "frame1"};
+  struct u7_vm_stack_frame_layout frame2_layout = {.description = "frame2"};
+
+  struct u7_vm_stack stack;
+  u7_vm_stack_init(&stack);
+  U7_ASSERT(u7_vm_stack_push_frame(&stack, &root_layout).error_code == 0);
+  U7_ASSERT(u7_vm_stack_push_frame(&stack, &frame1_layout).error_code == 0);
+  U7_ASSERT(u7_vm_stack_push_frame(&stack, &frame2_layout).error_code == 0);
+
+  struct collect_layouts_arg collected = {0};
+  u7_vm_stack_iterate(&stack, &collected, collect_layouts);
+
+  U7_ASSERT(collected.visited_size == 3);
+  U7_ASSERT(collected.visited[0] == &frame2_layout);
+  U7_ASSERT(collected.visited[1] == &frame1_layout);
+  U7_ASSERT(collected.visited[2] == &root_layout);
+
+  u7_vm_stack_destroy(&stack);
+}
+
+static bool stop_after_first(void* arg,
+                             struct u7_vm_stack_frame_layout const* layout,
+                             void* frame_ptr) {
+  (void)frame_ptr;
+  struct collect_layouts_arg* self = arg;
+  self->visited[self->visited_size] = layout;
+  self->visited_size += 1;
+  return false;
+}
+
+U7_TEST(test_iterate_stops_when_visitor_returns_false) {
+  struct u7_vm_stack_frame_layout root_layout = {.description = "root"};
+  struct u7_vm_stack_frame_layout frame1_layout = {.description = "frame1"};
+
+  struct u7_vm_stack stack;
+  u7_vm_stack_init(&stack);
+  U7_ASSERT(u7_vm_stack_push_frame(&stack, &root_layout).error_code == 0);
+  U7_ASSERT(u7_vm_stack_push_frame(&stack, &frame1_layout).error_code == 0);
+
+  struct collect_layouts_arg collected = {0};
+  u7_vm_stack_iterate(&stack, &collected, stop_after_first);
+
+  U7_ASSERT(collected.visited_size == 1);
+  U7_ASSERT(collected.visited[0] == &frame1_layout);
+
+  u7_vm_stack_destroy(&stack);
+}
+
+int main(int argc, char** argv) {
+  return u7_testing_run_registered(argc, argv);
+}

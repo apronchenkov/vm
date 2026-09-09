@@ -131,6 +131,6 @@ void u7_vm_stack_iterate(struct u7_vm_stack* self, void* arg,
       break;
     }
     top_offset = base_offset;
-    top_offset = frame_header.old_base_offset;
+    base_offset = frame_header.old_base_offset;
   }
 }

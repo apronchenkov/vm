@@ -42,3 +42,15 @@ cc_test(
         '//github.com/apronchenkov/u7_init:u7_init',
     ],
 )
+
+cc_test(
+    name='stack_test',
+    srcs=[
+        'stack_test.c',
+    ],
+    deps=[
+        ':vm',
+        '//github.com/apronchenkov/u7_init:testing',
+        '//github.com/apronchenkov/u7_init:u7_init',
+    ],
+)
