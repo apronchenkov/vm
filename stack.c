@@ -4,65 +4,64 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <stdlib.h>
-#include <string.h>
+#include <github.com/apronchenkov/u7_init/public/math.h>
+#include <stdint.h>
 
-void u7_vm_stack_init(struct u7_vm_stack* self) {
-  self->memory = NULL;
+u7_error u7_vm_stack_init(struct u7_vm_stack* self, size_t capacity,
+                          struct u7_vm_allocator allocator) {
+  void* memory = NULL;
+  if (capacity != 0) {
+    memory = allocator.allocate_fn(allocator.data, capacity);
+    if (memory == NULL) {
+      return u7_errnof(ENOMEM,
+                       "u7_vm_stack_init: allocate(%zu): not enough memory",
+                       capacity);
+    }
+  }
+  self->memory = memory;
   self->base_offset = 0;
   self->top_offset = 0;
-  self->capacity = 0;
+  self->capacity = capacity;
+  self->allocator = allocator;
+  return u7_ok();
 }
 
 void u7_vm_stack_destroy(struct u7_vm_stack* self) {
   while (self->base_offset != self->top_offset) {
     u7_vm_stack_pop_frame(self);
   }
-  free(self->memory);
-}
-
-struct u7_vm_stack_reserve_visitor_arg {
-  void* old_memory;
-  void* new_memory;
-};
-
-static bool u7_vm_stack_reserve_visitor(
-    void* arg, struct u7_vm_stack_frame_layout const* frame_layout,
-    void* frame_ptr) {
-  struct u7_vm_stack_reserve_visitor_arg a =
-      *(struct u7_vm_stack_reserve_visitor_arg*)arg;
-  if (frame_layout->post_realloc_fn) {
-    frame_layout->post_realloc_fn(
-        frame_layout, frame_ptr,
-        u7_vm_memory_add_offset(
-            a.new_memory, u7_vm_memory_byte_distance(a.old_memory, frame_ptr)));
+  if (self->memory != NULL) {
+    self->allocator.deallocate_fn(self->allocator.data, self->memory,
+                                  self->capacity);
   }
-  return true;
+  self->memory = NULL;
+  self->capacity = 0;
 }
 
-static u7_error u7_vm_stack_reserve(struct u7_vm_stack* self, size_t capacity) {
-  if (self->capacity >= capacity) {
+static u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
+                                    size_t required_capacity) {
+  if (required_capacity <= self->capacity) {
     return u7_ok();
   }
-  if (capacity < 3 * self->capacity / 2) {
-    capacity = 3 * self->capacity / 2;
+
+  bool overflow = false;
+  size_t new_capacity = U7_MUL_OVERFLOW_U64(self->capacity, 2, &overflow);
+  if (overflow) {
+    new_capacity = SIZE_MAX;
+  } else if (new_capacity < required_capacity) {
+    new_capacity = required_capacity;
   }
-  void* memory = malloc(capacity);
+
+  void* memory = self->allocator.reallocate_fn(
+      self->allocator.data, self->memory, self->capacity, new_capacity);
   if (memory == NULL) {
     return u7_errnof(ENOMEM,
-                     "u7_vm_stack_reserve: malloc(%zu): not enough memory",
-                     capacity);
+                     "u7_vm_stack_reserve: realloc(%zu): not enough memory",
+                     new_capacity);
   }
   assert(u7_vm_memory_is_aligned(memory, U7_VM_DEFAULT_ALIGNMENT));
-  if (self->memory) {
-    memcpy(memory, self->memory, self->top_offset);
-    struct u7_vm_stack_reserve_visitor_arg a = {.old_memory = self->memory,
-                                                .new_memory = memory};
-    u7_vm_stack_iterate(self, &a, u7_vm_stack_reserve_visitor);
-    free(self->memory);
-  }
   self->memory = memory;
-  self->capacity = capacity;
+  self->capacity = new_capacity;
   return u7_ok();
 }
 
@@ -71,9 +70,21 @@ u7_error u7_vm_stack_push_frame(
     struct u7_vm_stack_frame_layout const* frame_layout) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(frame_layout->locals_size % U7_VM_DEFAULT_ALIGNMENT == 0);
-  U7_RETURN_IF_ERROR(u7_vm_stack_reserve(
-      self, self->top_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
-                frame_layout->locals_size + frame_layout->extra_capacity));
+  assert(self->top_offset <= self->capacity);
+
+  bool overflow = false;
+  const size_t new_top_offset = U7_ADD_OVERFLOW_U64(
+      self->top_offset,
+      U7_ADD_OVERFLOW_U64(U7_VM_STACK_FRAME_HEADER_SIZE,
+                          frame_layout->locals_size, &overflow),
+      &overflow);
+  const size_t required_capacity = U7_ADD_OVERFLOW_U64(
+      new_top_offset, frame_layout->extra_capacity, &overflow);
+  if (overflow) {
+    return u7_errnof(EOVERFLOW, "u7_vm_stack_push_frame: size overflow");
+  }
+  U7_RETURN_IF_ERROR(u7_vm_stack_reserve(self, required_capacity));
+
   struct u7_vm_stack_frame_header* const frame_header =
       u7_vm_memory_add_offset(self->memory, self->top_offset);
   frame_header->old_base_offset = self->base_offset;
@@ -85,7 +96,7 @@ u7_error u7_vm_stack_push_frame(
             self->memory, self->top_offset + U7_VM_STACK_FRAME_HEADER_SIZE));
   }
   self->base_offset = self->top_offset;
-  self->top_offset += U7_VM_STACK_FRAME_HEADER_SIZE + frame_layout->locals_size;
+  self->top_offset = new_top_offset;
   return u7_ok();
 }
 

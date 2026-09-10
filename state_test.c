@@ -27,11 +27,13 @@ U7_TEST(test_dispatch_chains_musttail_and_stops) {
   struct u7_vm_instruction const* instructions[] = {&step, &step, &stop};
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
+  struct u7_vm_state_options options = u7_vm_state_options_default();
+  options.statics_layout = &statics_layout;
+  options.instructions = instructions;
+  options.instructions_size = 3;
   struct u7_vm_state state;
   g_step_count = 0;
-  U7_ASSERT(
-      u7_vm_state_init(&state, &statics_layout, instructions, 3).error_code ==
-      0);
+  U7_ASSERT_OK(u7_vm_state_init(&state, options));
 
   u7_vm_state_run(&state);
 
@@ -66,12 +68,14 @@ U7_TEST(test_dispatch_explicit_instruction_can_set_ip_and_continue) {
   struct u7_vm_instruction const* instructions[] = {&jump.base, &step, &stop};
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
+  struct u7_vm_state_options options = u7_vm_state_options_default();
+  options.statics_layout = &statics_layout;
+  options.instructions = instructions;
+  options.instructions_size = 3;
   struct u7_vm_state state;
   g_step_count = 0;
   g_jump_count = 0;
-  U7_ASSERT(
-      u7_vm_state_init(&state, &statics_layout, instructions, 3).error_code ==
-      0);
+  U7_ASSERT_OK(u7_vm_state_init(&state, options));
 
   u7_vm_state_run(&state);
 
@@ -112,11 +116,13 @@ U7_TEST(test_dispatch_does_not_grow_the_native_stack) {
   instructions[kFatStepCount] = &stop;
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
+  struct u7_vm_state_options options = u7_vm_state_options_default();
+  options.statics_layout = &statics_layout;
+  options.instructions = instructions;
+  options.instructions_size = kFatStepCount + 1;
   struct u7_vm_state state;
   g_fat_step_count = 0;
-  U7_ASSERT(
-      u7_vm_state_init(&state, &statics_layout, instructions, kFatStepCount + 1)
-          .error_code == 0);
+  U7_ASSERT_OK(u7_vm_state_init(&state, options));
 
   u7_vm_state_run(&state);
 

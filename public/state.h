@@ -12,6 +12,20 @@
 extern "C" {
 #endif  // __cplusplus
 
+// Options controlling how a state is provisioned.
+struct u7_vm_state_options {
+  struct u7_vm_stack_frame_layout const* statics_layout;
+  struct u7_vm_instruction const** instructions;
+  size_t instructions_size;
+  size_t initial_stack_capacity;
+  struct u7_vm_allocator allocator;
+};
+
+// Returns default options: a modest initial stack capacity backed by
+// u7_vm_default_allocator. statics_layout/instructions/instructions_size are
+// left unset -- the caller must still fill those in.
+struct u7_vm_state_options u7_vm_state_options_default();
+
 struct u7_vm_state {
   struct u7_vm_instruction const** instructions;
   size_t instructions_size;
@@ -20,9 +34,7 @@ struct u7_vm_state {
 };
 
 u7_error u7_vm_state_init(struct u7_vm_state* self,
-                          struct u7_vm_stack_frame_layout const* statics_layout,
-                          struct u7_vm_instruction const** instructions,
-                          size_t instructions_size);
+                          struct u7_vm_state_options options);
 
 void u7_vm_state_destroy(struct u7_vm_state* self);
 

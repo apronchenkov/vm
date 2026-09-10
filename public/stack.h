@@ -1,6 +1,7 @@
 #ifndef U7_VM_STACK_H_
 #define U7_VM_STACK_H_
 
+#include "@/public/allocator.h"
 #include "@/public/memory_utils.h"
 
 #include <github.com/apronchenkov/u7_init/public/init.h>
@@ -22,21 +23,16 @@ typedef void (*u7_vm_stack_frame_layout_init_fn_t)(
 typedef void (*u7_vm_stack_frame_layout_deinit_fn_t)(
     struct u7_vm_stack_frame_layout const* self, void* memory);
 
-// Post-processing after a reallocation of a stack frame a new memory address.
+// A stack frame layout.
 //
-// NOTE: This function does postprocessing after realloc(), means it's safe to
-// assume that "bytes" in source and destination has been already copied.
-typedef void (*u7_vm_stack_frame_layout_post_realloc_fn_t)(
-    struct u7_vm_stack_frame_layout const* self, void* source,
-    void* destination);
-
-// A stack frame layout (doesn't include the stack frame header).
+// NOTE: All values stored on the stack, including this frame's locals, must be
+// trivially relocatable as defined by RFC-2 GH-1. Growing the stack may move
+// them with a plain byte copy and performs no per-frame fixup.
 struct u7_vm_stack_frame_layout {
   size_t locals_size;
   size_t extra_capacity;
   u7_vm_stack_frame_layout_init_fn_t init_fn;
   u7_vm_stack_frame_layout_deinit_fn_t deinit_fn;
-  u7_vm_stack_frame_layout_post_realloc_fn_t post_realloc_fn;
   const char* description;
 };
 
@@ -67,6 +63,7 @@ struct u7_vm_stack {
   size_t base_offset;  // offset to the frame base
   size_t top_offset;   // offset to the stack top
   size_t capacity;     // offset to the stack end
+  struct u7_vm_allocator allocator;
 };
 
 // False -- stops iteration.
@@ -75,7 +72,8 @@ typedef bool (*u7_vm_stack_visitor_fn_t)(
     void* frame_ptr);
 
 // Initializes the stack structure.
-void u7_vm_stack_init(struct u7_vm_stack* self);
+u7_error u7_vm_stack_init(struct u7_vm_stack* self, size_t capacity,
+                          struct u7_vm_allocator allocator);
 
 // Releases stack resources.
 void u7_vm_stack_destroy(struct u7_vm_stack* self);

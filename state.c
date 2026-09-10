@@ -2,15 +2,26 @@
 
 #include <assert.h>
 
+struct u7_vm_state_options u7_vm_state_options_default() {
+  return (struct u7_vm_state_options){
+      .initial_stack_capacity = 4096,
+      .allocator = u7_vm_default_allocator,
+  };
+}
+
 u7_error u7_vm_state_init(struct u7_vm_state* self,
-                          struct u7_vm_stack_frame_layout const* statics_layout,
-                          struct u7_vm_instruction const** instructions,
-                          size_t instructions_size) {
-  self->instructions = instructions;
-  self->instructions_size = instructions_size;
+                          struct u7_vm_state_options options) {
+  self->instructions = options.instructions;
+  self->instructions_size = options.instructions_size;
   self->ip = 0;
-  u7_vm_stack_init(&self->stack);
-  return u7_vm_stack_push_frame(&self->stack, statics_layout);
+  U7_RETURN_IF_ERROR(u7_vm_stack_init(
+      &self->stack, options.initial_stack_capacity, options.allocator));
+  u7_error error = u7_vm_stack_push_frame(&self->stack, options.statics_layout);
+  if (error.error_code != 0) {
+    u7_vm_stack_destroy(&self->stack);
+    return error;
+  }
+  return u7_ok();
 }
 
 void u7_vm_state_destroy(struct u7_vm_state* self) {
