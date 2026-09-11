@@ -123,7 +123,7 @@ void u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
   self->base_offset = frame_header.old_base_offset;
 }
 
-void u7_vm_stack_iterate(struct u7_vm_stack* self, void* arg,
+void u7_vm_stack_iterate(struct u7_vm_stack* self, void* data,
                          u7_vm_stack_visitor_fn_t visitor) {
   size_t base_offset = self->base_offset;
   size_t top_offset = self->top_offset;
@@ -136,7 +136,7 @@ void u7_vm_stack_iterate(struct u7_vm_stack* self, void* arg,
         *(struct u7_vm_stack_frame_header*)u7_vm_memory_add_offset(self->memory,
                                                                    base_offset);
     if (!visitor(
-            arg, frame_header.frame_layout,
+            data, frame_header.frame_layout,
             u7_vm_memory_add_offset(
                 self->memory, base_offset + U7_VM_STACK_FRAME_HEADER_SIZE))) {
       break;

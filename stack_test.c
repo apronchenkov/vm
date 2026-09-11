@@ -8,11 +8,11 @@ struct collect_layouts_arg {
   size_t visited_size;
 };
 
-static bool collect_layouts(void* arg,
+static bool collect_layouts(void* data,
                             struct u7_vm_stack_frame_layout const* layout,
                             void* frame_ptr) {
   (void)frame_ptr;
-  struct collect_layouts_arg* self = arg;
+  struct collect_layouts_arg* self = data;
   U7_ASSERT(self->visited_size < 8);
   self->visited[self->visited_size] = layout;
   self->visited_size += 1;
@@ -41,11 +41,11 @@ U7_TEST(test_iterate_visits_every_frame_outward) {
   u7_vm_stack_destroy(&stack);
 }
 
-static bool stop_after_first(void* arg,
+static bool stop_after_first(void* data,
                              struct u7_vm_stack_frame_layout const* layout,
                              void* frame_ptr) {
   (void)frame_ptr;
-  struct collect_layouts_arg* self = arg;
+  struct collect_layouts_arg* self = data;
   self->visited[self->visited_size] = layout;
   self->visited_size += 1;
   return false;
@@ -70,9 +70,10 @@ U7_TEST(test_iterate_stops_when_visitor_returns_false) {
 }
 
 static bool verify_descending_values(
-    void* arg, struct u7_vm_stack_frame_layout const* layout, void* frame_ptr) {
+    void* data, struct u7_vm_stack_frame_layout const* layout,
+    void* frame_ptr) {
   (void)layout;
-  int* next_expected = arg;
+  int* next_expected = data;
   if (*(int*)frame_ptr != *next_expected) {
     return false;
   }

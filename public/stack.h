@@ -66,11 +66,6 @@ struct u7_vm_stack {
   struct u7_vm_allocator allocator;
 };
 
-// False -- stops iteration.
-typedef bool (*u7_vm_stack_visitor_fn_t)(
-    void* arg, struct u7_vm_stack_frame_layout const* frame_layout,
-    void* frame_ptr);
-
 // Initializes the stack structure.
 u7_error u7_vm_stack_init(struct u7_vm_stack* self, size_t capacity,
                           struct u7_vm_allocator allocator);
@@ -85,10 +80,6 @@ u7_error u7_vm_stack_push_frame(
 
 // Drops the trailing stack frame.
 void u7_vm_stack_pop_frame(struct u7_vm_stack* self);
-
-// Iterates through the stack frames.
-void u7_vm_stack_iterate(struct u7_vm_stack* self, void* arg,
-                         u7_vm_stack_visitor_fn_t visitor);
 
 // Returns the current frame layout.
 static inline struct u7_vm_stack_frame_layout const*
@@ -120,6 +111,15 @@ static inline void* u7_vm_stack_locals(struct u7_vm_stack* self) {
   return u7_vm_memory_add_offset(
       self->memory, self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE);
 }
+
+// False -- stops iteration.
+typedef bool (*u7_vm_stack_visitor_fn_t)(
+    void* data, struct u7_vm_stack_frame_layout const* frame_layout,
+    void* frame_ptr);
+
+// Iterates through the stack frames.
+void u7_vm_stack_iterate(struct u7_vm_stack* self, void* data,
+                         u7_vm_stack_visitor_fn_t visitor);
 
 #ifdef __cplusplus
 }  // extern "C"
