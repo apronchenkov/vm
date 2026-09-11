@@ -9,30 +9,31 @@ extern "C" {
 #endif  // __cplusplus
 
 struct u7_vm_state;
-struct u7_vm_instruction;
 
 // Executes the instruction.
 //
 // Args:
-//   self: Pointer to the instruction struct.
+//   data: Pointer to instruction-specific data.
 //   state: Execution state.
 //
 // Returns:
 //   False if the instruction chain should stop. The instruction is
 //   responsible to update the execution state's status to indicate why.
-typedef bool (*u7_vm_instruction_execute_fn_t)(
-    struct u7_vm_instruction const* self, struct u7_vm_state* state);
+typedef bool (*u7_vm_instruction_execute_fn_t)(void* data,
+                                               struct u7_vm_state* state);
 
-// This struct declares the usage API of a VM Instruction.
+// Defines the interface to an instruction.
 //
-// This struct doesn't represent ownership: no standard way to copy/move it, nor
-// to destroy it.
+// This struct does not represent ownership. It may be copied, but the lifetime
+// of `data` must be managed independently.
 struct u7_vm_instruction {
+  void* data;
   u7_vm_instruction_execute_fn_t execute_fn;
 };
 
 // Executes the instruction within the given state.
-#define u7_vm_instruction_execute(self, state) (self->execute_fn(self, state))
+#define u7_vm_instruction_execute(instr, state) \
+  ((instr).execute_fn((instr).data, state))
 
 // Defines an instruction's execute method `fn_name(self, state)`.
 //
@@ -48,9 +49,8 @@ struct u7_vm_instruction {
   __attribute__((always_inline)) static inline bool fn_name##_impl( \
       self_type const* self, struct u7_vm_state* state);            \
                                                                     \
-  static bool fn_name(struct u7_vm_instruction const* self,         \
-                      struct u7_vm_state* state) {                  \
-    if (!fn_name##_impl((self_type const*)self, state)) {           \
+  static bool fn_name(void* data, struct u7_vm_state* state) {      \
+    if (!fn_name##_impl((self_type const*)data, state)) {           \
       return false;                                                 \
     }                                                               \
     state->ip += 1;                                                 \
@@ -76,9 +76,8 @@ struct u7_vm_instruction {
   __attribute__((always_inline)) static inline bool fn_name##_impl( \
       self_type const* self, struct u7_vm_state* state);            \
                                                                     \
-  static bool fn_name(struct u7_vm_instruction const* self,         \
-                      struct u7_vm_state* state) {                  \
-    if (!fn_name##_impl((self_type const*)self, state)) {           \
+  static bool fn_name(void* data, struct u7_vm_state* state) {      \
+    if (!fn_name##_impl((self_type const*)data, state)) {           \
       return false;                                                 \
     }                                                               \
     assert(state->ip < state->instructions_size);                   \

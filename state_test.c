@@ -8,23 +8,25 @@
 
 static int g_step_count = 0;
 
-U7_VM_DEFINE_INSTRUCTION_EXEC(execute_step, struct u7_vm_instruction) {
+U7_VM_DEFINE_INSTRUCTION_EXEC(execute_step, void) {
   (void)self;
   (void)state;
   g_step_count += 1;
   return true;
 }
 
-U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_stop, struct u7_vm_instruction) {
+U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_stop, void) {
   (void)self;
   state->status = U7_VM_STATE_STATUS_HALTED;
   return false;
 }
 
 U7_TEST(test_dispatch_chains_musttail_and_stops) {
-  struct u7_vm_instruction step = {.execute_fn = execute_step};
-  struct u7_vm_instruction stop = {.execute_fn = execute_stop};
-  struct u7_vm_instruction const* instructions[] = {&step, &step, &stop};
+  struct u7_vm_instruction instructions[] = {
+      {.execute_fn = execute_step},
+      {.execute_fn = execute_step},
+      {.execute_fn = execute_stop},
+  };
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
   struct u7_vm_state_options options = u7_vm_state_options_default();
@@ -43,7 +45,6 @@ U7_TEST(test_dispatch_chains_musttail_and_stops) {
 }
 
 struct jump_instruction {
-  struct u7_vm_instruction base;
   size_t target;
 };
 
@@ -56,16 +57,17 @@ U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_jump, struct jump_instruction) {
 }
 
 U7_TEST(test_dispatch_explicit_instruction_can_set_ip_and_continue) {
-  struct jump_instruction jump = {.base = {.execute_fn = execute_jump},
-                                  .target = 2};
-  struct u7_vm_instruction step = {.execute_fn = execute_step};
-  struct u7_vm_instruction stop = {.execute_fn = execute_stop};
+  struct jump_instruction jump = {.target = 2};
 
   // Instructions:
   //   0: jump 2
   //   1: step_count += 1 // not executed
   //   2: stop
-  struct u7_vm_instruction const* instructions[] = {&jump.base, &step, &stop};
+  struct u7_vm_instruction instructions[] = {
+      {.data = &jump, .execute_fn = execute_jump},
+      {.execute_fn = execute_step},
+      {.execute_fn = execute_stop},
+  };
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
   struct u7_vm_state_options options = u7_vm_state_options_default();
@@ -96,7 +98,7 @@ enum { kFatStepPaddingSize = 1 << 16 };
 static int g_fat_step_count = 0;
 static volatile char g_fat_step_sink;
 
-U7_VM_DEFINE_INSTRUCTION_EXEC(execute_fat_step, struct u7_vm_instruction) {
+U7_VM_DEFINE_INSTRUCTION_EXEC(execute_fat_step, void) {
   (void)self;
   (void)state;
   char padding[kFatStepPaddingSize];
@@ -107,13 +109,13 @@ U7_VM_DEFINE_INSTRUCTION_EXEC(execute_fat_step, struct u7_vm_instruction) {
 }
 
 U7_TEST(test_dispatch_does_not_grow_the_native_stack) {
-  struct u7_vm_instruction fat_step = {.execute_fn = execute_fat_step};
-  struct u7_vm_instruction stop = {.execute_fn = execute_stop};
-  static struct u7_vm_instruction const* instructions[kFatStepCount + 1];
+  static struct u7_vm_instruction instructions[kFatStepCount + 1];
   for (int i = 0; i < kFatStepCount; ++i) {
-    instructions[i] = &fat_step;
+    instructions[i] =
+        (struct u7_vm_instruction){.execute_fn = execute_fat_step};
   }
-  instructions[kFatStepCount] = &stop;
+  instructions[kFatStepCount] =
+      (struct u7_vm_instruction){.execute_fn = execute_stop};
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
   struct u7_vm_state_options options = u7_vm_state_options_default();
@@ -131,8 +133,7 @@ U7_TEST(test_dispatch_does_not_grow_the_native_stack) {
   u7_vm_state_destroy(&state);
 }
 
-U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_suspend,
-                                       struct u7_vm_instruction) {
+U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_suspend, void) {
   (void)self;
   state->ip += 1;
   state->status = U7_VM_STATE_STATUS_SUSPENDED;
@@ -140,11 +141,12 @@ U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_suspend,
 }
 
 U7_TEST(test_state_run_suspends_and_resumes_at_the_next_instruction) {
-  struct u7_vm_instruction step = {.execute_fn = execute_step};
-  struct u7_vm_instruction suspend = {.execute_fn = execute_suspend};
-  struct u7_vm_instruction stop = {.execute_fn = execute_stop};
-  struct u7_vm_instruction const* instructions[] = {&step, &suspend, &step,
-                                                    &stop};
+  struct u7_vm_instruction instructions[] = {
+      {.execute_fn = execute_step},
+      {.execute_fn = execute_suspend},
+      {.execute_fn = execute_step},
+      {.execute_fn = execute_stop},
+  };
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
   struct u7_vm_state_options options = u7_vm_state_options_default();
@@ -166,8 +168,7 @@ U7_TEST(test_state_run_suspends_and_resumes_at_the_next_instruction) {
 }
 
 U7_TEST(test_state_run_on_a_halted_state_is_a_noop) {
-  struct u7_vm_instruction stop = {.execute_fn = execute_stop};
-  struct u7_vm_instruction const* instructions[] = {&stop};
+  struct u7_vm_instruction instructions[] = {{.execute_fn = execute_stop}};
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
   struct u7_vm_state_options options = u7_vm_state_options_default();
@@ -183,16 +184,14 @@ U7_TEST(test_state_run_on_a_halted_state_is_a_noop) {
   u7_vm_state_destroy(&state);
 }
 
-U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_corrupt,
-                                       struct u7_vm_instruction) {
+U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_corrupt, void) {
   (void)self;
   state->status = U7_VM_STATE_STATUS_CORRUPTED;
   return false;
 }
 
 U7_TEST(test_state_run_on_a_corrupted_state_is_a_noop) {
-  struct u7_vm_instruction corrupt = {.execute_fn = execute_corrupt};
-  struct u7_vm_instruction const* instructions[] = {&corrupt};
+  struct u7_vm_instruction instructions[] = {{.execute_fn = execute_corrupt}};
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
   struct u7_vm_state_options options = u7_vm_state_options_default();

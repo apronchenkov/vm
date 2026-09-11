@@ -15,7 +15,7 @@ extern "C" {
 // Options controlling how a state is provisioned.
 struct u7_vm_state_options {
   struct u7_vm_stack_frame_layout const* statics_layout;
-  struct u7_vm_instruction const** instructions;
+  struct u7_vm_instruction const* instructions;
   size_t instructions_size;
   size_t initial_stack_capacity;
   struct u7_vm_allocator allocator;
@@ -48,7 +48,7 @@ enum u7_vm_state_status {
 };
 
 struct u7_vm_state {
-  struct u7_vm_instruction const** instructions;
+  struct u7_vm_instruction const* instructions;
   size_t instructions_size;
   size_t ip;
   enum u7_vm_state_status status;
