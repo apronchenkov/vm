@@ -39,7 +39,7 @@ enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self) {
   self->status = U7_VM_STATE_STATUS_RUNNING;
   do {
     assert(self->ip < self->instructions_size);
-  } while (u7_vm_instruction_execute(self->instructions[self->ip], self));
+  } while (U7_VM_INSTRUCTION_EXECUTE(self->instructions[self->ip], self));
 
   // A stopping instruction must set a non-running status.
   assert(self->status == U7_VM_STATE_STATUS_SUSPENDED ||

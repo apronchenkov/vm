@@ -32,7 +32,7 @@ struct u7_vm_instruction {
 };
 
 // Executes the instruction within the given state.
-#define u7_vm_instruction_execute(instr, state) \
+#define U7_VM_INSTRUCTION_EXECUTE(instr, state) \
   ((instr).execute_fn((instr).data, state))
 
 // Defines an instruction's execute method `fn_name(self, state)`.
@@ -55,7 +55,7 @@ struct u7_vm_instruction {
     }                                                               \
     state->ip += 1;                                                 \
     assert(state->ip < state->instructions_size);                   \
-    __attribute__((musttail)) return u7_vm_instruction_execute(     \
+    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(     \
         state->instructions[state->ip], state);                     \
   }                                                                 \
                                                                     \
@@ -81,7 +81,7 @@ struct u7_vm_instruction {
       return false;                                                 \
     }                                                               \
     assert(state->ip < state->instructions_size);                   \
-    __attribute__((musttail)) return u7_vm_instruction_execute(     \
+    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(     \
         state->instructions[state->ip], state);                     \
   }                                                                 \
                                                                     \
