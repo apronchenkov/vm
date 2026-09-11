@@ -28,7 +28,7 @@ u7_error u7_vm_stack_init(struct u7_vm_stack* self, size_t capacity,
 
 void u7_vm_stack_destroy(struct u7_vm_stack* self) {
   while (self->base_offset != self->top_offset) {
-    u7_vm_stack_pop_frame(self);
+    (void)u7_vm_stack_pop_frame(self);
   }
   if (self->memory != NULL) {
     self->allocator.deallocate_fn(self->allocator.data, self->memory,
@@ -67,7 +67,7 @@ static u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
 
 u7_error u7_vm_stack_push_frame(
     struct u7_vm_stack* self,
-    struct u7_vm_stack_frame_layout const* frame_layout) {
+    struct u7_vm_stack_frame_layout const* frame_layout, size_t return_ip) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(frame_layout->locals_size % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset <= self->capacity);
@@ -89,6 +89,7 @@ u7_error u7_vm_stack_push_frame(
       u7_vm_memory_add_offset(self->memory, self->top_offset);
   frame_header->old_base_offset = self->base_offset;
   frame_header->frame_layout = frame_layout;
+  frame_header->return_ip = return_ip;
   if (frame_layout->init_fn) {
     frame_layout->init_fn(
         frame_layout,
@@ -100,7 +101,7 @@ u7_error u7_vm_stack_push_frame(
   return u7_ok();
 }
 
-void u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
+size_t u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
   size_t base_offset = self->base_offset;
   size_t top_offset = self->top_offset;
   (void)top_offset;
@@ -121,6 +122,7 @@ void u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
   }
   self->top_offset = self->base_offset;
   self->base_offset = frame_header.old_base_offset;
+  return frame_header.return_ip;
 }
 
 void u7_vm_stack_iterate(struct u7_vm_stack* self, void* data,

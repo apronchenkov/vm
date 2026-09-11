@@ -207,6 +207,126 @@ U7_TEST(test_state_run_on_a_corrupted_state_is_a_noop) {
   u7_vm_state_destroy(&state);
 }
 
+// A stand-in for a "call"-like instruction: pushes a frame using the core
+// primitive directly and continues. The VM itself has no notion of calls;
+// pushing a frame is enough to make exception unwinding meaningful.
+struct push_frame_instruction {
+  struct u7_vm_stack_frame_layout const* layout;
+};
+
+U7_VM_DEFINE_INSTRUCTION_EXEC(execute_push_frame,
+                              struct push_frame_instruction) {
+  // `state->ip` is this instruction's own index here (EXEC only advances it
+  // after the body succeeds) -- the point unwinding should land on if the
+  // pushed frame is ever popped for an exception.
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&state->stack, self->layout, state->ip));
+  return true;
+}
+
+U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_raise, void) {
+  (void)self;
+  state->status = U7_VM_STATE_STATUS_EXCEPTION;
+  return false;
+}
+
+static int g_deinit_count = 0;
+
+static void deinit_frame(struct u7_vm_stack_frame_layout const* layout,
+                         void* memory) {
+  (void)layout;
+  (void)memory;
+  g_deinit_count += 1;
+}
+
+static enum u7_vm_exception_handler_action recover_at_ip_2(
+    struct u7_vm_state* state, void* data) {
+  (void)data;
+  state->ip = 2;
+  return U7_VM_EXCEPTION_HANDLER_ACTION_RECOVER;
+}
+
+U7_TEST(test_state_exception_recovers_via_handler) {
+  struct u7_vm_stack_frame_layout callee_layout = {
+      .deinit_fn = deinit_frame,
+      .exception_handler_fn = recover_at_ip_2,
+      .description = "callee",
+  };
+  struct push_frame_instruction push_data = {.layout = &callee_layout};
+
+  // Instructions:
+  //   0: push_frame(callee)
+  //   1: raise           (inside the callee; its handler recovers to 2)
+  //   2: stop
+  struct u7_vm_instruction instructions[] = {
+      {.data = &push_data, .execute_fn = execute_push_frame},
+      {.execute_fn = execute_raise},
+      {.execute_fn = execute_stop},
+  };
+
+  struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
+  struct u7_vm_state_options options = u7_vm_state_options_default();
+  options.statics_layout = &statics_layout;
+  options.instructions = instructions;
+  options.instructions_size = 3;
+  struct u7_vm_state state;
+  g_deinit_count = 0;
+  U7_ASSERT_OK(u7_vm_state_init(&state, options));
+
+  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_HALTED);
+
+  // RECOVER keeps the callee frame alive; it's the frame that stops HALTED.
+  U7_ASSERT(state.stack.base_offset != 0);
+  U7_ASSERT(g_deinit_count == 0);
+
+  u7_vm_state_destroy(&state);
+  U7_ASSERT(g_deinit_count == 1);  // destroy tears down whatever is left
+}
+
+static enum u7_vm_exception_handler_action decline(struct u7_vm_state* state,
+                                                   void* data) {
+  (void)state;
+  (void)data;
+  return U7_VM_EXCEPTION_HANDLER_ACTION_UNWIND;
+}
+
+U7_TEST(test_state_exception_unwinds_to_the_root_when_unhandled) {
+  struct u7_vm_stack_frame_layout callee_layout = {
+      .deinit_fn = deinit_frame,
+      .exception_handler_fn = decline,
+      .description = "callee",
+  };
+  struct push_frame_instruction push_data = {.layout = &callee_layout};
+
+  // Instructions:
+  //   0: push_frame(callee)
+  //   1: raise           (inside the callee; its handler declines)
+  struct u7_vm_instruction instructions[] = {
+      {.data = &push_data, .execute_fn = execute_push_frame},
+      {.execute_fn = execute_raise},
+  };
+
+  struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
+  struct u7_vm_state_options options = u7_vm_state_options_default();
+  options.statics_layout = &statics_layout;
+  options.instructions = instructions;
+  options.instructions_size = 2;
+  struct u7_vm_state state;
+  g_deinit_count = 0;
+  U7_ASSERT_OK(u7_vm_state_init(&state, options));
+
+  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_EXCEPTION);
+  U7_ASSERT(g_deinit_count == 1);           // the callee frame was unwound
+  U7_ASSERT(state.stack.base_offset == 0);  // only the root frame remains
+  // Repositioned to the root's own suspended point (the push_frame
+  // instruction), not left at the original raise site inside the callee.
+  U7_ASSERT(state.ip == 0);
+
+  // An unhandled exception is terminal, same as HALTED/CORRUPTED.
+  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_EXCEPTION);
+
+  u7_vm_state_destroy(&state);
+}
+
 int main(int argc, char** argv) {
   return u7_testing_run_registered(argc, argv);
 }

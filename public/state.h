@@ -35,6 +35,9 @@ enum u7_vm_state_status {
   // An instruction stopped the chain for an ordinary, expected pause with no
   // program-level error. u7_vm_state_run resumes it where it left off.
   U7_VM_STATE_STATUS_SUSPENDED,
+  // An instruction raised an exception. `state->ip` identifies the instruction
+  // associated with the exception in the current frame.
+  U7_VM_STATE_STATUS_EXCEPTION,
   // An instruction stopped the chain for normal, permanent completion.
   // Unlike SUSPENDED, calling u7_vm_state_run again is a no-op that returns
   // HALTED without executing anything.
@@ -63,8 +66,8 @@ void u7_vm_state_destroy(struct u7_vm_state* self);
 // Runs a ready state or resumes a suspended state.
 //
 // Returns the reason execution stopped. Calling this on a terminal state
-// (HALTED or CORRUPTED) returns its current status without executing
-// anything.
+// (HALTED, EXCEPTION, or CORRUPTED) returns its current status without
+// executing anything.
 enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self);
 
 static inline void* u7_vm_state_globals(struct u7_vm_state* self) {
