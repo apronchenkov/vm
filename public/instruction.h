@@ -89,6 +89,57 @@ struct u7_vm_instruction {
       __attribute__((unused)) self_type const* self,                \
       __attribute__((unused)) struct u7_vm_state* state)
 
+// Defines an instruction's execute method `fn_name(self, state)` with a cold
+// failure path.
+//
+// On success, `state->ip` is advanced and execution continues with the next
+// instruction, same as U7_VM_DEFINE_INSTRUCTION_EXEC. On failure, execution
+// tail-calls `fn_name##_failure` without advancing `state->ip`; define that
+// function with U7_VM_DEFINE_INSTRUCTION_FAILURE_FN(fn_name, self_type)
+// before this macro's use.
+//
+// Keeping the failure path out of this function avoids call-preservation
+// overhead on the normal execution path.
+#define U7_VM_DEFINE_INSTRUCTION_EXEC_WITH_COLD_FAILURE(fn_name, self_type) \
+  __attribute__((always_inline)) static inline bool fn_name##_impl(         \
+      self_type const* self, struct u7_vm_state* state);                    \
+                                                                            \
+  __attribute__((cold, noinline)) static bool fn_name##_failure(            \
+      void* data, struct u7_vm_state* state);                               \
+                                                                            \
+  static bool fn_name(void* data, struct u7_vm_state* state) {              \
+    if (__builtin_expect(!fn_name##_impl((self_type const*)data, state),    \
+                         false)) {                                          \
+      __attribute__((musttail)) return fn_name##_failure(data, state);      \
+    }                                                                       \
+    state->ip += 1;                                                         \
+    assert(state->ip < state->instructions_size);                           \
+    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(             \
+        state->instructions[state->ip], state);                             \
+  }                                                                         \
+                                                                            \
+  __attribute__((always_inline)) static inline bool fn_name##_impl(         \
+      __attribute__((unused)) self_type const* self,                        \
+      __attribute__((unused)) struct u7_vm_state* state)
+
+// Defines the cold failure path for an execute method defined with
+// U7_VM_DEFINE_INSTRUCTION_EXEC_WITH_COLD_FAILURE(fn_name, self_type).
+//
+// The body is expected to return false and stop the instruction chain
+// rather than dispatch to the next instruction.
+#define U7_VM_DEFINE_INSTRUCTION_FAILURE_FN(fn_name, self_type)    \
+  __attribute__((cold)) static inline bool fn_name##_failure_impl( \
+      self_type const* self, struct u7_vm_state* state);           \
+                                                                   \
+  __attribute__((cold, noinline)) static bool fn_name##_failure(   \
+      void* data, struct u7_vm_state* state) {                     \
+    return fn_name##_failure_impl((self_type const*)data, state);  \
+  }                                                                \
+                                                                   \
+  __attribute__((cold)) static inline bool fn_name##_failure_impl( \
+      __attribute__((unused)) self_type const* self,               \
+      __attribute__((unused)) struct u7_vm_state* state)
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus
