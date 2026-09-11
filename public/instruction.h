@@ -18,7 +18,8 @@ struct u7_vm_instruction;
 //   state: Execution state.
 //
 // Returns:
-//   False if the instruction chain should stop.
+//   False if the instruction chain should stop. The instruction is
+//   responsible to update the execution state's status to indicate why.
 typedef bool (*u7_vm_instruction_execute_fn_t)(
     struct u7_vm_instruction const* self, struct u7_vm_state* state);
 

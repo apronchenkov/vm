@@ -14,6 +14,7 @@ u7_error u7_vm_state_init(struct u7_vm_state* self,
   self->instructions = options.instructions;
   self->instructions_size = options.instructions_size;
   self->ip = 0;
+  self->status = U7_VM_STATE_STATUS_READY;
   U7_RETURN_IF_ERROR(u7_vm_stack_init(
       &self->stack, options.initial_stack_capacity, options.allocator));
   u7_error error = u7_vm_stack_push_frame(&self->stack, options.statics_layout);
@@ -28,8 +29,21 @@ void u7_vm_state_destroy(struct u7_vm_state* self) {
   u7_vm_stack_destroy(&self->stack);
 }
 
-void u7_vm_state_run(struct u7_vm_state* self) {
+enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self) {
+  if (self->status == U7_VM_STATE_STATUS_HALTED ||
+      self->status == U7_VM_STATE_STATUS_CORRUPTED) {
+    return self->status;
+  }
+
+  assert(self->status != U7_VM_STATE_STATUS_RUNNING);
+  self->status = U7_VM_STATE_STATUS_RUNNING;
   do {
     assert(self->ip < self->instructions_size);
   } while (u7_vm_instruction_execute(self->instructions[self->ip], self));
+
+  // A stopping instruction must set a non-running status.
+  assert(self->status == U7_VM_STATE_STATUS_SUSPENDED ||
+         self->status == U7_VM_STATE_STATUS_HALTED ||
+         self->status == U7_VM_STATE_STATUS_CORRUPTED);
+  return self->status;
 }
