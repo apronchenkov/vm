@@ -1,5 +1,6 @@
 #include "@/public/stack.h"
 
+#include <errno.h>
 #include <github.com/apronchenkov/u7_init/public/testing.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -34,7 +35,7 @@ U7_TEST(test_iterate_visits_every_frame_outward) {
   struct collect_layouts_arg collected = {0};
   u7_vm_stack_iterate(&stack, &collected, collect_layouts);
 
-  U7_ASSERT(collected.visited_size == 3);
+  U7_ASSERT_EQ(collected.visited_size, 3);
   U7_ASSERT(collected.visited[0] == &frame2_layout);
   U7_ASSERT(collected.visited[1] == &frame1_layout);
   U7_ASSERT(collected.visited[2] == &root_layout);
@@ -64,7 +65,7 @@ U7_TEST(test_iterate_stops_when_visitor_returns_false) {
   struct collect_layouts_arg collected = {0};
   u7_vm_stack_iterate(&stack, &collected, stop_after_first);
 
-  U7_ASSERT(collected.visited_size == 1);
+  U7_ASSERT_EQ(collected.visited_size, 1);
   U7_ASSERT(collected.visited[0] == &frame1_layout);
 
   u7_vm_stack_destroy(&stack);
@@ -98,13 +99,48 @@ U7_TEST(test_growing_the_stack_preserves_frame_contents) {
 
   int next_expected = kFrameCount - 1;
   u7_vm_stack_iterate(&stack, &next_expected, verify_descending_values);
-  U7_ASSERT(next_expected == -1);
+  U7_ASSERT_EQ(next_expected, -1);
 
   u7_vm_stack_destroy(&stack);
 }
 
-// A push whose required growth would exceed the allocator's budget must fail
-// without corrupting the stack; a smaller push that fits must still succeed.
+U7_TEST(test_reserve_is_a_noop_when_capacity_already_sufficient) {
+  struct u7_vm_stack stack;
+  U7_ASSERT_OK(u7_vm_stack_init(&stack, 128, u7_vm_default_allocator));
+  void* const memory = stack.memory;
+  U7_ASSERT_OK(u7_vm_stack_reserve(&stack, 64));
+  U7_ASSERT_EQ(stack.capacity, 128);
+  U7_ASSERT(stack.memory == memory);
+  u7_vm_stack_destroy(&stack);
+}
+
+U7_TEST(test_reserve_doubles_capacity_when_growth_is_needed) {
+  struct u7_vm_stack stack;
+  U7_ASSERT_OK(u7_vm_stack_init(&stack, 64, u7_vm_default_allocator));
+  U7_ASSERT_OK(u7_vm_stack_reserve(&stack, 65));
+  U7_ASSERT_EQ(stack.capacity, 128);
+  u7_vm_stack_destroy(&stack);
+}
+
+U7_TEST(test_reserve_grows_to_required_capacity_when_doubling_is_not_enough) {
+  struct u7_vm_stack stack;
+  U7_ASSERT_OK(u7_vm_stack_init(&stack, 64, u7_vm_default_allocator));
+  U7_ASSERT_OK(u7_vm_stack_reserve(&stack, 1000));
+  U7_ASSERT_EQ(stack.capacity, 1000);
+  u7_vm_stack_destroy(&stack);
+}
+
+U7_TEST(test_reserve_reports_allocation_failure) {
+  struct u7_vm_limited_allocator limited;
+  u7_vm_limited_allocator_init(&limited, u7_vm_default_allocator, 64);
+  struct u7_vm_stack stack;
+  U7_ASSERT_OK(
+      u7_vm_stack_init(&stack, 0, u7_vm_limited_allocator_make(&limited)));
+  U7_ASSERT_ERROR_CODE(u7_vm_stack_reserve(&stack, 1000), ENOMEM);
+  U7_ASSERT_EQ(stack.capacity, 0);
+  u7_vm_stack_destroy(&stack);
+}
+
 U7_TEST(test_push_frame_reports_allocation_failure) {
   struct u7_vm_limited_allocator limited;
   u7_vm_limited_allocator_init(&limited, u7_vm_default_allocator,
@@ -115,8 +151,7 @@ U7_TEST(test_push_frame_reports_allocation_failure) {
 
   struct u7_vm_stack_frame_layout layout = {.description = "frame"};
   U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, NULL));
-  U7_ASSERT(u7_vm_stack_push_frame(&stack, &layout, NULL).error_code != 0);
-
+  U7_ASSERT_ERROR_CODE(u7_vm_stack_push_frame(&stack, &layout, NULL), ENOMEM);
   u7_vm_stack_destroy(&stack);
 }
 

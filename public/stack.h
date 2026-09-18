@@ -4,7 +4,9 @@
 #include "@/public/allocator.h"
 #include "@/public/memory_utils.h"
 
+#include <errno.h>
 #include <github.com/apronchenkov/u7_init/public/init.h>
+#include <github.com/apronchenkov/u7_init/public/math.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -97,16 +99,78 @@ u7_error u7_vm_stack_init(struct u7_vm_stack* self, size_t capacity,
 // Releases stack resources.
 void u7_vm_stack_destroy(struct u7_vm_stack* self);
 
-// Pushes a frame onto the stack. The stack treats return_ip as opaque and
-// returns it unchanged from `u7_vm_stack_pop_frame()` when the frame is
-// removed.
-u7_error u7_vm_stack_push_frame(
+// Ensures that the stack can hold at least `required_capacity` bytes
+// without reallocation. If the current capacity is smaller, new storage
+// is allocated; otherwise, this function does nothing.
+u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
+                             size_t required_capacity);
+
+// Pushes a frame onto the stack. The stack treats `return_ip` as opaque
+// and returns it unchanged from `u7_vm_stack_pop_frame()` when the frame
+// is removed.
+static inline u7_error u7_vm_stack_push_frame(
     struct u7_vm_stack* self, struct u7_vm_stack_frame_layout const* frame_layout,
-    struct u7_vm_instruction const* return_ip);
+    struct u7_vm_instruction const* return_ip) {
+  assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
+  assert(frame_layout->locals_size % U7_VM_DEFAULT_ALIGNMENT == 0);
+  assert(self->top_offset <= self->capacity);
+
+  bool overflow = false;
+  const size_t new_top_offset = U7_ADD_OVERFLOW_U64(
+      self->top_offset,
+      U7_ADD_OVERFLOW_U64((size_t)U7_VM_STACK_FRAME_HEADER_SIZE,
+                          frame_layout->locals_size, &overflow),
+      &overflow);
+  const size_t required_capacity = U7_ADD_OVERFLOW_U64(
+      new_top_offset, frame_layout->extra_capacity, &overflow);
+  if (overflow) {
+    return u7_errnof(EOVERFLOW, "u7_vm_stack_push_frame: size overflow");
+  }
+  U7_RETURN_IF_ERROR(u7_vm_stack_reserve(self, required_capacity));
+
+  struct u7_vm_stack_frame_header* const frame_header =
+      (struct u7_vm_stack_frame_header*)u7_vm_memory_add_offset(
+          self->memory, self->top_offset);
+  frame_header->old_base_offset = self->base_offset;
+  frame_header->frame_layout = frame_layout;
+  frame_header->return_ip = return_ip;
+  if (frame_layout->init_fn) {
+    frame_layout->init_fn(
+        frame_layout,
+        u7_vm_memory_add_offset(
+            self->memory, self->top_offset + U7_VM_STACK_FRAME_HEADER_SIZE));
+  }
+  self->base_offset = self->top_offset;
+  self->top_offset = new_top_offset;
+  return u7_ok();
+}
 
 // Drops the trailing stack frame, returning the `return_ip` it was pushed
 // with.
-struct u7_vm_instruction const* u7_vm_stack_pop_frame(struct u7_vm_stack* self);
+static inline struct u7_vm_instruction const* u7_vm_stack_pop_frame(
+    struct u7_vm_stack* self) {
+  size_t base_offset = self->base_offset;
+  size_t top_offset = self->top_offset;
+  (void)top_offset;
+  assert(base_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
+  assert(top_offset >= base_offset + sizeof(struct u7_vm_stack_frame_header));
+  struct u7_vm_stack_frame_header const frame_header =
+      *(struct u7_vm_stack_frame_header*)u7_vm_memory_add_offset(self->memory,
+                                                                 base_offset);
+  struct u7_vm_stack_frame_layout const* const frame_layout =
+      frame_header.frame_layout;
+  assert(top_offset >=
+         base_offset + U7_VM_DEFAULT_ALIGNMENT + frame_layout->locals_size);
+  if (frame_layout->deinit_fn) {
+    frame_layout->deinit_fn(
+        frame_layout,
+        u7_vm_memory_add_offset(
+            self->memory, self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE));
+  }
+  self->top_offset = self->base_offset;
+  self->base_offset = frame_header.old_base_offset;
+  return frame_header.return_ip;
+}
 
 // Returns the current frame layout.
 static inline struct u7_vm_stack_frame_layout const*
