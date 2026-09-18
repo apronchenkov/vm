@@ -13,12 +13,12 @@ u7_error u7_vm_state_init(struct u7_vm_state* self,
                           struct u7_vm_state_options options) {
   self->instructions = options.instructions;
   self->instructions_size = options.instructions_size;
-  self->ip = 0;
+  self->ip = self->instructions;
   self->status = U7_VM_STATE_STATUS_READY;
   U7_RETURN_IF_ERROR(u7_vm_stack_init(
       &self->stack, options.initial_stack_capacity, options.allocator));
-  u7_error error =
-      u7_vm_stack_push_frame(&self->stack, options.statics_layout, 0);
+  u7_error error = u7_vm_stack_push_frame(&self->stack, options.statics_layout,
+                                          self->instructions);
   if (error.error_code != 0) {
     u7_vm_stack_destroy(&self->stack);
     return error;
@@ -43,7 +43,8 @@ static bool u7_vm_state_handle_exception(struct u7_vm_state* self) {
         frame_layout->exception_handler_fn(
             self, frame_layout->exception_handler_data) ==
             U7_VM_EXCEPTION_HANDLER_ACTION_RECOVER) {
-      assert(self->ip < self->instructions_size);
+      assert(self->ip >= self->instructions &&
+             self->ip < self->instructions + self->instructions_size);
       self->status = U7_VM_STATE_STATUS_RUNNING;
       return true;
     }
@@ -67,8 +68,9 @@ enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self) {
   self->status = U7_VM_STATE_STATUS_RUNNING;
   do {
     do {
-      assert(self->ip < self->instructions_size);
-    } while (U7_VM_INSTRUCTION_EXECUTE(self->instructions[self->ip], self));
+      assert(self->ip >= self->instructions &&
+             self->ip < self->instructions + self->instructions_size);
+    } while (U7_VM_INSTRUCTION_EXECUTE(self->ip, self));
   } while (self->status == U7_VM_STATE_STATUS_EXCEPTION &&
            u7_vm_state_handle_exception(self));
 

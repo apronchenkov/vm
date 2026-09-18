@@ -13,6 +13,7 @@ extern "C" {
 #endif  // __cplusplus
 
 struct u7_vm_state;
+struct u7_vm_instruction;
 
 // Procedures for a stack frame initialization and deconstruction.
 struct u7_vm_stack_frame_layout;
@@ -61,8 +62,8 @@ struct u7_vm_stack_frame_layout {
 // A stack header of a stack frame.
 struct u7_vm_stack_frame_header {
   size_t old_base_offset;
-  struct u7_vm_stack_frame_layout const* frame_layout;
-  size_t return_ip;
+  struct u7_vm_stack_frame_layout const* /*nonnull*/ frame_layout;
+  struct u7_vm_instruction const* /*nullable*/ return_ip;
 };
 
 enum {
@@ -100,12 +101,12 @@ void u7_vm_stack_destroy(struct u7_vm_stack* self);
 // returns it unchanged from `u7_vm_stack_pop_frame()` when the frame is
 // removed.
 u7_error u7_vm_stack_push_frame(
-    struct u7_vm_stack* self,
-    struct u7_vm_stack_frame_layout const* frame_layout, size_t return_ip);
+    struct u7_vm_stack* self, struct u7_vm_stack_frame_layout const* frame_layout,
+    struct u7_vm_instruction const* return_ip);
 
 // Drops the trailing stack frame, returning the `return_ip` it was pushed
 // with.
-size_t u7_vm_stack_pop_frame(struct u7_vm_stack* self);
+struct u7_vm_instruction const* u7_vm_stack_pop_frame(struct u7_vm_stack* self);
 
 // Returns the current frame layout.
 static inline struct u7_vm_stack_frame_layout const*

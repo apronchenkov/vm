@@ -51,9 +51,9 @@ enum u7_vm_state_status {
 };
 
 struct u7_vm_state {
-  struct u7_vm_instruction const* instructions;
+  struct u7_vm_instruction const* /*nonnull*/ instructions;
   size_t instructions_size;
-  size_t ip;
+  struct u7_vm_instruction const* /*nonnull*/ ip;
   enum u7_vm_state_status status;
   struct u7_vm_stack stack;
 };

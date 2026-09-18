@@ -66,8 +66,8 @@ static u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
 }
 
 u7_error u7_vm_stack_push_frame(
-    struct u7_vm_stack* self,
-    struct u7_vm_stack_frame_layout const* frame_layout, size_t return_ip) {
+    struct u7_vm_stack* self, struct u7_vm_stack_frame_layout const* frame_layout,
+    struct u7_vm_instruction const* return_ip) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(frame_layout->locals_size % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset <= self->capacity);
@@ -101,7 +101,7 @@ u7_error u7_vm_stack_push_frame(
   return u7_ok();
 }
 
-size_t u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
+struct u7_vm_instruction const* u7_vm_stack_pop_frame(struct u7_vm_stack* self) {
   size_t base_offset = self->base_offset;
   size_t top_offset = self->top_offset;
   (void)top_offset;

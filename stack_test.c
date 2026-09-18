@@ -27,9 +27,9 @@ U7_TEST(test_iterate_visits_every_frame_outward) {
 
   struct u7_vm_stack stack;
   U7_ASSERT_OK(u7_vm_stack_init(&stack, 0, u7_vm_default_allocator));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &root_layout, SIZE_MAX));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame1_layout, SIZE_MAX));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame2_layout, SIZE_MAX));
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &root_layout, NULL));
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame1_layout, NULL));
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame2_layout, NULL));
 
   struct collect_layouts_arg collected = {0};
   u7_vm_stack_iterate(&stack, &collected, collect_layouts);
@@ -58,8 +58,8 @@ U7_TEST(test_iterate_stops_when_visitor_returns_false) {
 
   struct u7_vm_stack stack;
   U7_ASSERT_OK(u7_vm_stack_init(&stack, 0, u7_vm_default_allocator));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &root_layout, SIZE_MAX));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame1_layout, SIZE_MAX));
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &root_layout, NULL));
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame1_layout, NULL));
 
   struct collect_layouts_arg collected = {0};
   u7_vm_stack_iterate(&stack, &collected, stop_after_first);
@@ -92,7 +92,7 @@ U7_TEST(test_growing_the_stack_preserves_frame_contents) {
 
   enum { kFrameCount = 256 };
   for (int i = 0; i < kFrameCount; ++i) {
-    U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, SIZE_MAX));
+    U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, NULL));
     *(int*)u7_vm_stack_locals(&stack) = i;
   }
 
@@ -114,8 +114,8 @@ U7_TEST(test_push_frame_reports_allocation_failure) {
       u7_vm_stack_init(&stack, 0, u7_vm_limited_allocator_make(&limited)));
 
   struct u7_vm_stack_frame_layout layout = {.description = "frame"};
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, SIZE_MAX));
-  U7_ASSERT(u7_vm_stack_push_frame(&stack, &layout, SIZE_MAX).error_code != 0);
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, NULL));
+  U7_ASSERT(u7_vm_stack_push_frame(&stack, &layout, NULL).error_code != 0);
 
   u7_vm_stack_destroy(&stack);
 }

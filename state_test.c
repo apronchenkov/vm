@@ -9,16 +9,14 @@
 static int g_step_count = 0;
 
 U7_VM_DEFINE_INSTRUCTION_EXEC(execute_step, void) {
-  (void)self;
-  (void)state;
   g_step_count += 1;
   return true;
 }
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_stop, void) {
-  (void)self;
   state->status = U7_VM_STATE_STATUS_HALTED;
-  return false;
+  state->ip = ip;
+  return NULL;
 }
 
 U7_TEST(test_dispatch_chains_musttail_and_stops) {
@@ -39,8 +37,8 @@ U7_TEST(test_dispatch_chains_musttail_and_stops) {
 
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_HALTED);
 
-  U7_ASSERT(g_step_count == 2);
-  U7_ASSERT(state.ip == 2);
+  U7_ASSERT_EQ(g_step_count, 2);
+  U7_ASSERT(state.ip == state.instructions + 2);
   u7_vm_state_destroy(&state);
 }
 
@@ -52,8 +50,7 @@ static int g_jump_count = 0;
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_jump, struct jump_instruction) {
   g_jump_count += 1;
-  state->ip = self->target;
-  return true;
+  return state->instructions + self->target;
 }
 
 U7_TEST(test_dispatch_explicit_instruction_can_set_ip_and_continue) {
@@ -81,9 +78,9 @@ U7_TEST(test_dispatch_explicit_instruction_can_set_ip_and_continue) {
 
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_HALTED);
 
-  U7_ASSERT(g_jump_count == 1);
-  U7_ASSERT(g_step_count == 0);
-  U7_ASSERT(state.ip == 2);
+  U7_ASSERT_EQ(g_jump_count, 1);
+  U7_ASSERT_EQ(g_step_count, 0);
+  U7_ASSERT(state.ip == state.instructions + 2);
   u7_vm_state_destroy(&state);
 }
 
@@ -99,8 +96,6 @@ static int g_fat_step_count = 0;
 static volatile char g_fat_step_sink;
 
 U7_VM_DEFINE_INSTRUCTION_EXEC(execute_fat_step, void) {
-  (void)self;
-  (void)state;
   char padding[kFatStepPaddingSize];
   memset(padding, 1, sizeof(padding));
   g_fat_step_sink = padding[sizeof(padding) - 1];
@@ -128,16 +123,15 @@ U7_TEST(test_dispatch_does_not_grow_the_native_stack) {
 
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_HALTED);
 
-  U7_ASSERT(g_fat_step_count == kFatStepCount);
-  U7_ASSERT(state.ip == kFatStepCount);
+  U7_ASSERT_EQ(g_fat_step_count, kFatStepCount);
+  U7_ASSERT(state.ip == state.instructions + kFatStepCount);
   u7_vm_state_destroy(&state);
 }
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_suspend, void) {
-  (void)self;
-  state->ip += 1;
+  state->ip = ip + 1;
   state->status = U7_VM_STATE_STATUS_SUSPENDED;
-  return false;
+  return NULL;
 }
 
 U7_TEST(test_state_run_suspends_and_resumes_at_the_next_instruction) {
@@ -158,11 +152,11 @@ U7_TEST(test_state_run_suspends_and_resumes_at_the_next_instruction) {
   U7_ASSERT_OK(u7_vm_state_init(&state, options));
 
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_SUSPENDED);
-  U7_ASSERT(g_step_count == 1);
-  U7_ASSERT(state.ip == 2);
+  U7_ASSERT_EQ(g_step_count, 1);
+  U7_ASSERT(state.ip == state.instructions + 2);
 
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_HALTED);
-  U7_ASSERT(g_step_count == 2);
+  U7_ASSERT_EQ(g_step_count, 2);
 
   u7_vm_state_destroy(&state);
 }
@@ -185,9 +179,9 @@ U7_TEST(test_state_run_on_a_halted_state_is_a_noop) {
 }
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_corrupt, void) {
-  (void)self;
   state->status = U7_VM_STATE_STATUS_CORRUPTED;
-  return false;
+  state->ip = ip;
+  return NULL;
 }
 
 U7_TEST(test_state_run_on_a_corrupted_state_is_a_noop) {
@@ -214,19 +208,18 @@ struct push_frame_instruction {
   struct u7_vm_stack_frame_layout const* layout;
 };
 
-U7_VM_DEFINE_INSTRUCTION_EXEC(execute_push_frame,
-                              struct push_frame_instruction) {
-  // `state->ip` is this instruction's own index here (EXEC only advances it
-  // after the body succeeds) -- the point unwinding should land on if the
-  // pushed frame is ever popped for an exception.
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&state->stack, self->layout, state->ip));
-  return true;
+// EXEC_EXPLICIT, not plain EXEC, because this body needs `ip` -- its own
+// position -- while continuing, which plain EXEC's impl no longer receives.
+U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_push_frame,
+                                       struct push_frame_instruction) {
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&state->stack, self->layout, ip));
+  return ip + 1;
 }
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_raise, void) {
-  (void)self;
   state->status = U7_VM_STATE_STATUS_EXCEPTION;
-  return false;
+  state->ip = ip;
+  return NULL;
 }
 
 static int g_deinit_count = 0;
@@ -241,7 +234,7 @@ static void deinit_frame(struct u7_vm_stack_frame_layout const* layout,
 static enum u7_vm_exception_handler_action recover_at_ip_2(
     struct u7_vm_state* state, void* data) {
   (void)data;
-  state->ip = 2;
+  state->ip = state->instructions + 2;
   return U7_VM_EXCEPTION_HANDLER_ACTION_RECOVER;
 }
 
@@ -276,10 +269,10 @@ U7_TEST(test_state_exception_recovers_via_handler) {
 
   // RECOVER keeps the callee frame alive; it's the frame that stops HALTED.
   U7_ASSERT(state.stack.base_offset != 0);
-  U7_ASSERT(g_deinit_count == 0);
+  U7_ASSERT_EQ(g_deinit_count, 0);
 
   u7_vm_state_destroy(&state);
-  U7_ASSERT(g_deinit_count == 1);  // destroy tears down whatever is left
+  U7_ASSERT_EQ(g_deinit_count, 1);  // destroy tears down whatever is left
 }
 
 static enum u7_vm_exception_handler_action decline(struct u7_vm_state* state,
@@ -315,11 +308,11 @@ U7_TEST(test_state_exception_unwinds_to_the_root_when_unhandled) {
   U7_ASSERT_OK(u7_vm_state_init(&state, options));
 
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_EXCEPTION);
-  U7_ASSERT(g_deinit_count == 1);           // the callee frame was unwound
-  U7_ASSERT(state.stack.base_offset == 0);  // only the root frame remains
+  U7_ASSERT_EQ(g_deinit_count, 1);           // the callee frame was unwound
+  U7_ASSERT_EQ(state.stack.base_offset, 0);  // only the root frame remains
   // Repositioned to the root's own suspended point (the push_frame
   // instruction), not left at the original raise site inside the callee.
-  U7_ASSERT(state.ip == 0);
+  U7_ASSERT(state.ip == state.instructions);
 
   // An unhandled exception is terminal, same as HALTED/CORRUPTED.
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_EXCEPTION);
