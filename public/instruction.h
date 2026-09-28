@@ -11,6 +11,16 @@ extern "C" {
 struct u7_vm_state;
 struct u7_vm_instruction;
 
+// Use a calling convention that preserves fewer general-purpose registers,
+// reducing register save/restore overhead in the instruction dispatch chain.
+//
+// Use the ordinary calling convention when the attribute is unavailable.
+#if defined(__has_attribute) && __has_attribute(preserve_none)
+#define U7_VM_INSTRUCTION_EXEC_CALL_CONV __attribute__((preserve_none))
+#else
+#define U7_VM_INSTRUCTION_EXEC_CALL_CONV
+#endif
+
 // Executes the instruction.
 //
 // Args:
@@ -23,7 +33,7 @@ struct u7_vm_instruction;
 //   responsible to update the execution state's status to indicate why.
 typedef bool (*u7_vm_instruction_execute_fn_t)(
     void* data, struct u7_vm_state* state,
-    struct u7_vm_instruction const* ip);
+    struct u7_vm_instruction const* ip) U7_VM_INSTRUCTION_EXEC_CALL_CONV;
 
 // Defines the interface to an instruction.
 //
@@ -54,8 +64,9 @@ struct u7_vm_instruction {
   __attribute__((always_inline)) static inline bool fn_name##_impl(     \
       self_type const* self, struct u7_vm_state* state);                \
                                                                         \
-  static bool fn_name(void* data, struct u7_vm_state* state,            \
-                      struct u7_vm_instruction const* ip) {             \
+  U7_VM_INSTRUCTION_EXEC_CALL_CONV static bool fn_name(                 \
+      void* data, struct u7_vm_state* state,                            \
+      struct u7_vm_instruction const* ip) {                             \
     if (!fn_name##_impl((self_type const*)data, state)) {               \
       state->ip = ip;                                                   \
       return false;                                                     \
@@ -92,8 +103,9 @@ struct u7_vm_instruction {
   fn_name##_impl(self_type const* self, struct u7_vm_state* state,             \
                  struct u7_vm_instruction const* ip);                          \
                                                                                \
-  static bool fn_name(void* data, struct u7_vm_state* state,                   \
-                      struct u7_vm_instruction const* ip) {                    \
+  U7_VM_INSTRUCTION_EXEC_CALL_CONV static bool fn_name(                        \
+      void* data, struct u7_vm_state* state,                                   \
+      struct u7_vm_instruction const* ip) {                                    \
     struct u7_vm_instruction const* const next_ip =                            \
         fn_name##_impl((self_type const*)data, state, ip);                     \
     if (next_ip == NULL) {                                                     \
@@ -126,28 +138,29 @@ struct u7_vm_instruction {
 //
 // Keeping the failure path in a separate function is intended to reduce
 // register-preservation overhead on the normal execution path.
-#define U7_VM_DEFINE_INSTRUCTION_EXEC_WITH_COLD_FAILURE(fn_name, self_type) \
-  __attribute__((always_inline)) static inline bool fn_name##_impl(         \
-      self_type const* self, struct u7_vm_state* state);                    \
-                                                                            \
-  __attribute__((cold, noinline)) static bool fn_name##_failure(            \
-      void* data, struct u7_vm_state* state,                                \
-      struct u7_vm_instruction const* ip);                                  \
-                                                                            \
-  static bool fn_name(void* data, struct u7_vm_state* state,                \
-                      struct u7_vm_instruction const* ip) {                 \
-    if (__builtin_expect(!fn_name##_impl((self_type const*)data, state),    \
-                         false)) {                                          \
-      __attribute__((musttail)) return fn_name##_failure(data, state, ip);  \
-    }                                                                       \
-    struct u7_vm_instruction const* const next_ip = ip + 1;                 \
-    assert(next_ip < state->instructions + state->instructions_size);       \
-    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next_ip,     \
-                                                               state);      \
-  }                                                                         \
-                                                                            \
-  __attribute__((always_inline)) static inline bool fn_name##_impl(         \
-      __attribute__((unused)) self_type const* self,                        \
+#define U7_VM_DEFINE_INSTRUCTION_EXEC_WITH_COLD_FAILURE(fn_name, self_type)    \
+  __attribute__((always_inline)) static inline bool fn_name##_impl(            \
+      self_type const* self, struct u7_vm_state* state);                       \
+                                                                               \
+  U7_VM_INSTRUCTION_EXEC_CALL_CONV __attribute__((cold, noinline)) static bool \
+  fn_name##_failure(void* data, struct u7_vm_state* state,                     \
+                    struct u7_vm_instruction const* ip);                       \
+                                                                               \
+  U7_VM_INSTRUCTION_EXEC_CALL_CONV static bool fn_name(                        \
+      void* data, struct u7_vm_state* state,                                   \
+      struct u7_vm_instruction const* ip) {                                    \
+    if (__builtin_expect(!fn_name##_impl((self_type const*)data, state),       \
+                         false)) {                                             \
+      __attribute__((musttail)) return fn_name##_failure(data, state, ip);     \
+    }                                                                          \
+    struct u7_vm_instruction const* const next_ip = ip + 1;                    \
+    assert(next_ip < state->instructions + state->instructions_size);          \
+    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next_ip,        \
+                                                               state);         \
+  }                                                                            \
+                                                                               \
+  __attribute__((always_inline)) static inline bool fn_name##_impl(            \
+      __attribute__((unused)) self_type const* self,                           \
       __attribute__((unused)) struct u7_vm_state* state)
 
 // Defines the cold failure function for an instruction executor defined
@@ -161,19 +174,19 @@ struct u7_vm_instruction {
 // required by the instruction's semantics. The body must always return
 // false; returning true here is undefined -- nothing computes a next
 // instruction to dispatch to on this path.
-#define U7_VM_DEFINE_INSTRUCTION_FAILURE_FN(fn_name, self_type)    \
-  __attribute__((cold)) static inline bool fn_name##_failure_impl( \
-      self_type const* self, struct u7_vm_state* state);           \
-                                                                   \
-  __attribute__((cold, noinline)) static bool fn_name##_failure(   \
-      void* data, struct u7_vm_state* state,                       \
-      struct u7_vm_instruction const* ip) {                        \
-    state->ip = ip;                                                \
-    return fn_name##_failure_impl((self_type const*)data, state);  \
-  }                                                                \
-                                                                   \
-  __attribute__((cold)) static inline bool fn_name##_failure_impl( \
-      __attribute__((unused)) self_type const* self,               \
+#define U7_VM_DEFINE_INSTRUCTION_FAILURE_FN(fn_name, self_type)                \
+  __attribute__((cold)) static inline bool fn_name##_failure_impl(             \
+      self_type const* self, struct u7_vm_state* state);                       \
+                                                                               \
+  U7_VM_INSTRUCTION_EXEC_CALL_CONV __attribute__((cold, noinline)) static bool \
+  fn_name##_failure(void* data, struct u7_vm_state* state,                     \
+                    struct u7_vm_instruction const* ip) {                      \
+    state->ip = ip;                                                            \
+    return fn_name##_failure_impl((self_type const*)data, state);              \
+  }                                                                            \
+                                                                               \
+  __attribute__((cold)) static inline bool fn_name##_failure_impl(             \
+      __attribute__((unused)) self_type const* self,                           \
       __attribute__((unused)) struct u7_vm_state* state)
 
 #ifdef __cplusplus
