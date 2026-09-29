@@ -15,7 +15,7 @@ U7_VM_DEFINE_INSTRUCTION_EXEC(execute_step, void) {
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_stop, void) {
   state->status = U7_VM_STATE_STATUS_HALTED;
   state->ip = ip;
-  return NULL;
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT();
 }
 
 static bool g_guarded_should_succeed = true;
@@ -25,7 +25,6 @@ static int g_guarded_failure_count = 0;
 U7_VM_DEFINE_INSTRUCTION_FAILURE_FN(execute_guarded, void) {
   g_guarded_failure_count += 1;
   state->status = U7_VM_STATE_STATUS_CORRUPTED;
-  return false;
 }
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_WITH_COLD_FAILURE(execute_guarded, void) {

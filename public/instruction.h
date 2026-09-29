@@ -27,13 +27,14 @@ struct u7_vm_instruction;
 //   data: Pointer to instruction-specific data.
 //   state: Execution state.
 //   ip: Pointer to the instruction being executed.
+//   base: base: Pointer to the current frame's base.
 //
 // Returns:
 //   False if the instruction chain should stop. The instruction is
 //   responsible to update the execution state's status to indicate why.
 typedef bool (*u7_vm_instruction_execute_fn_t)(
-    void* data, struct u7_vm_state* state,
-    struct u7_vm_instruction const* ip) U7_VM_INSTRUCTION_EXEC_CALL_CONV;
+    void* data, struct u7_vm_state* state, struct u7_vm_instruction const* ip,
+    void* base) U7_VM_INSTRUCTION_EXEC_CALL_CONV;
 
 // Defines the interface to an instruction.
 //
@@ -44,150 +45,177 @@ struct u7_vm_instruction {
   u7_vm_instruction_execute_fn_t execute_fn;
 };
 
-// Executes the instruction at `ip` within the given state.
-#define U7_VM_INSTRUCTION_EXECUTE(ip, state) \
-  ((ip)->execute_fn((ip)->data, state, ip))
+// Executes the instruction at `ip` using `state` and the current frame's
+// base pointer. `base` must equal `u7_vm_stack_frame_base(&state->stack)`.
+#define U7_VM_INSTRUCTION_EXECUTE(ip, state, base) \
+  ((ip)->execute_fn((ip)->data, state, ip, base))
 
-// Defines an instruction executor whose body receives `self` and `state`.
+// Defines an instruction's execution function. The body receives `self`,
+// `state`, and `base`.
 //
-// Return true to chain execution to the next instruction, or false to
-// stop at the current instruction. On stopping, `state->ip` is set to
-// the current instruction.
+// Return true to chain execution to the next instruction, forwarding
+// `base` unchanged. Return false to stop at the current instruction;
+// `state->ip` is then set to that instruction.
 //
 // The body must not modify `state->ip` or rely on it identifying the
-// current instruction.
+// current instruction. It may push or pop stack values without relocating
+// the stack. It must not push or pop stack frames.
 //
-// For instructions that need their current position or control where
-// execution continues or stops, use
+// For instructions that need their current position, control where
+// execution continues or stops, change the current frame, or relocate
+// the stack, define the execution function manually or use
 // U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT below.
-#define U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name, self_type)               \
-  __attribute__((always_inline)) static inline bool fn_name##_impl(     \
-      self_type const* self, struct u7_vm_state* state);                \
-                                                                        \
-  U7_VM_INSTRUCTION_EXEC_CALL_CONV static bool fn_name(                 \
-      void* data, struct u7_vm_state* state,                            \
-      struct u7_vm_instruction const* ip) {                             \
-    if (!fn_name##_impl((self_type const*)data, state)) {               \
-      state->ip = ip;                                                   \
-      return false;                                                     \
-    }                                                                   \
-    struct u7_vm_instruction const* const next_ip = ip + 1;             \
-    assert(next_ip < state->instructions + state->instructions_size);   \
-    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next_ip, \
-                                                               state);  \
-  }                                                                     \
-                                                                        \
-  __attribute__((always_inline)) static inline bool fn_name##_impl(     \
-      __attribute__((unused)) self_type const* self,                    \
-      __attribute__((unused)) struct u7_vm_state* state)
-
-// Defines an instruction executor whose body receives `self`, `state`,
-// and `ip`, where `ip` points to the current instruction.
-//
-// Unlike U7_VM_DEFINE_INSTRUCTION_EXEC, this macro lets the body choose
-// where execution continues or stops.
-//
-// Return `ip + 1` to chain execution to the next instruction, or another
-// instruction pointer to transfer control elsewhere. If the body returns
-// a non-NULL pointer, it must leave `state->ip` unchanged.
-//
-// Return NULL to stop the instruction chain. Before returning NULL,
-// set `state->ip` to the appropriate stopping position. For example,
-// yield sets it to `ip + 1` so the next call to u7_vm_state_run resumes
-// after it.
-//
-// Use this macro for jumps, calls, returns, yield, and terminal
-// instructions.
-#define U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(fn_name, self_type)             \
-  __attribute__((always_inline)) static inline struct u7_vm_instruction const* \
-  fn_name##_impl(self_type const* self, struct u7_vm_state* state,             \
-                 struct u7_vm_instruction const* ip);                          \
+#define U7_VM_DEFINE_INSTRUCTION_EXEC(fn_name, self_type)                      \
+  __attribute__((always_inline)) static inline bool fn_name##_impl(            \
+      self_type const* self, struct u7_vm_state* state, void* base);           \
                                                                                \
   U7_VM_INSTRUCTION_EXEC_CALL_CONV static bool fn_name(                        \
       void* data, struct u7_vm_state* state,                                   \
-      struct u7_vm_instruction const* ip) {                                    \
-    struct u7_vm_instruction const* const next_ip =                            \
-        fn_name##_impl((self_type const*)data, state, ip);                     \
-    if (next_ip == NULL) {                                                     \
+      struct u7_vm_instruction const* ip, void* base) {                        \
+    if (!fn_name##_impl((self_type const*)data, state, base)) {                \
+      state->ip = ip;                                                          \
       return false;                                                            \
     }                                                                          \
+    struct u7_vm_instruction const* const next_ip = ip + 1;                    \
     assert(next_ip < state->instructions + state->instructions_size);          \
-    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next_ip,        \
-                                                               state);         \
+    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next_ip, state, \
+                                                               base);          \
   }                                                                            \
                                                                                \
-  __attribute__((always_inline)) static inline struct u7_vm_instruction const* \
-  fn_name##_impl(__attribute__((unused)) self_type const* self,                \
-                 __attribute__((unused)) struct u7_vm_state* state,            \
-                 __attribute__((unused)) struct u7_vm_instruction const* ip)
+  __attribute__((always_inline)) static inline bool fn_name##_impl(            \
+      __attribute__((unused)) self_type const* self,                           \
+      __attribute__((unused)) struct u7_vm_state* state,                       \
+      __attribute__((unused)) void* base)
 
-// Defines an instruction executor whose body receives `self` and `state`,
-// with a separate cold failure path.
+// Result of a U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT body.
+struct u7_vm_instruction_exec_explicit_result {
+  struct u7_vm_instruction const* ip;  // NULL stops the instruction chain.
+  void* base;                          // Ignored when ip is NULL.
+};
+
+// Constructs a result for a U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT body
+// using designated initializers, such as .ip = next_ip, .base = base.
+#define U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT(...) \
+  ((struct u7_vm_instruction_exec_explicit_result){__VA_ARGS__})
+
+// Defines an instruction's execution function. The body receives `self`,
+// `state`, `ip`, and `base`, where `ip` points to the current instruction
+// and `base` points to the current frame's base.
 //
-// Return true to chain execution to the next instruction, as with
-// U7_VM_DEFINE_INSTRUCTION_EXEC. Return false to tail-call
-// `fn_name##_failure`, which sets `state->ip` to the current instruction
-// before running the failure body.
+// Unlike U7_VM_DEFINE_INSTRUCTION_EXEC, this macro lets the body choose
+// the next instruction and supply its frame base.
 //
-// The executor body must not modify `state->ip` or rely on it identifying
-// the current instruction.
+// Return `ip + 1` with the unchanged `base` to execute the following
+// instruction in the same frame. Return another instruction pointer or
+// frame base to change where execution continues. If the returned `ip`
+// is non-NULL, the body must leave `state->ip` unchanged.
+//
+// After changing frames or relocating the stack, recompute `base` before
+// using it again or returning it for further execution.
+//
+// Return a result with a NULL `ip` to stop the instruction chain. Before
+// returning, set `state->ip` to the position required by the instruction's
+// semantics. For example, yield sets it to `ip + 1` so the next call to
+// u7_vm_state_run resumes after it.
+#define U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(fn_name, self_type)             \
+  __attribute__((always_inline)) static inline struct                          \
+      u7_vm_instruction_exec_explicit_result                                   \
+      fn_name##_impl(self_type const* self, struct u7_vm_state* state,         \
+                     struct u7_vm_instruction const* ip, void* base);          \
+                                                                               \
+  U7_VM_INSTRUCTION_EXEC_CALL_CONV static bool fn_name(                        \
+      void* data, struct u7_vm_state* state,                                   \
+      struct u7_vm_instruction const* ip, void* base) {                        \
+    struct u7_vm_instruction_exec_explicit_result const next =                 \
+        fn_name##_impl((self_type const*)data, state, ip, base);               \
+    if (next.ip == NULL) {                                                     \
+      return false;                                                            \
+    }                                                                          \
+    assert(next.ip < state->instructions + state->instructions_size);          \
+    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next.ip, state, \
+                                                               next.base);     \
+  }                                                                            \
+                                                                               \
+  __attribute__((always_inline)) static inline struct                          \
+      u7_vm_instruction_exec_explicit_result                                   \
+      fn_name##_impl(                                                          \
+          __attribute__((unused)) self_type const* self,                       \
+          __attribute__((unused)) struct u7_vm_state* state,                   \
+          __attribute__((unused)) struct u7_vm_instruction const* ip,          \
+          __attribute__((unused)) void* base)
+
+// Defines an instruction's execution function with a separate cold failure
+// path. The body receives `self`, `state`, and `base`.
+//
+// Return true to chain execution to the next instruction. Return false to
+// tail-call the failure function, which sets `state->ip` to the current
+// instruction, runs the failure body, and stops the instruction chain.
+//
+// The body must not modify `state->ip` or rely on it identifying the
+// current instruction. If the body returns true, execution continues
+// with the instruction immediately following the current one.
+//
+// `base` is forwarded unchanged to the next instruction or failure
+// function. The body may push or pop stack values without relocating
+// the stack. It must not push or pop stack frames.
 //
 // Define the failure function with
 // U7_VM_DEFINE_INSTRUCTION_FAILURE_FN(fn_name, self_type)
 // before using this macro.
-//
-// Keeping the failure path in a separate function is intended to reduce
-// register-preservation overhead on the normal execution path.
 #define U7_VM_DEFINE_INSTRUCTION_EXEC_WITH_COLD_FAILURE(fn_name, self_type)    \
   __attribute__((always_inline)) static inline bool fn_name##_impl(            \
-      self_type const* self, struct u7_vm_state* state);                       \
+      self_type const* self, struct u7_vm_state* state, void* base);           \
                                                                                \
-  U7_VM_INSTRUCTION_EXEC_CALL_CONV __attribute__((cold, noinline)) static bool \
-  fn_name##_failure(void* data, struct u7_vm_state* state,                     \
-                    struct u7_vm_instruction const* ip);                       \
+  U7_VM_INSTRUCTION_EXEC_CALL_CONV                                             \
+  __attribute__((cold, noinline)) static bool fn_name##_failure(               \
+      void* data, struct u7_vm_state* state,                                   \
+      struct u7_vm_instruction const* ip, void* base);                         \
                                                                                \
   U7_VM_INSTRUCTION_EXEC_CALL_CONV static bool fn_name(                        \
       void* data, struct u7_vm_state* state,                                   \
-      struct u7_vm_instruction const* ip) {                                    \
-    if (__builtin_expect(!fn_name##_impl((self_type const*)data, state),       \
+      struct u7_vm_instruction const* ip, void* base) {                        \
+    if (__builtin_expect(!fn_name##_impl((self_type const*)data, state, base), \
                          false)) {                                             \
-      __attribute__((musttail)) return fn_name##_failure(data, state, ip);     \
+      __attribute__((musttail)) return fn_name##_failure(data, state, ip,      \
+                                                         base);                \
     }                                                                          \
     struct u7_vm_instruction const* const next_ip = ip + 1;                    \
     assert(next_ip < state->instructions + state->instructions_size);          \
-    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next_ip,        \
-                                                               state);         \
+    __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next_ip, state, \
+                                                               base);          \
   }                                                                            \
                                                                                \
   __attribute__((always_inline)) static inline bool fn_name##_impl(            \
       __attribute__((unused)) self_type const* self,                           \
-      __attribute__((unused)) struct u7_vm_state* state)
+      __attribute__((unused)) struct u7_vm_state* state,                       \
+      __attribute__((unused)) void* base)
 
-// Defines the cold failure function for an instruction executor defined
-// with U7_VM_DEFINE_INSTRUCTION_EXEC_WITH_COLD_FAILURE.
+// Defines the cold failure function for an instruction defined with
+// U7_VM_DEFINE_INSTRUCTION_EXEC_WITH_COLD_FAILURE.
 //
-// The body receives `self` and `state`. Before the body runs, `state->ip`
-// is set to the current instruction.
+// The body receives `self`, `state`, and `base`. On entry to the body,
+// `state->ip` points to the current instruction.
 //
-// Return false to stop the instruction chain. Leave `state->ip` unchanged
-// to stop at the current instruction, or set it to another position if
-// required by the instruction's semantics. The body must always return
-// false; returning true here is undefined -- nothing computes a next
-// instruction to dispatch to on this path.
-#define U7_VM_DEFINE_INSTRUCTION_FAILURE_FN(fn_name, self_type)                \
-  __attribute__((cold)) static inline bool fn_name##_failure_impl(             \
-      self_type const* self, struct u7_vm_state* state);                       \
-                                                                               \
-  U7_VM_INSTRUCTION_EXEC_CALL_CONV __attribute__((cold, noinline)) static bool \
-  fn_name##_failure(void* data, struct u7_vm_state* state,                     \
-                    struct u7_vm_instruction const* ip) {                      \
-    state->ip = ip;                                                            \
-    return fn_name##_failure_impl((self_type const*)data, state);              \
-  }                                                                            \
-                                                                               \
-  __attribute__((cold)) static inline bool fn_name##_failure_impl(             \
-      __attribute__((unused)) self_type const* self,                           \
-      __attribute__((unused)) struct u7_vm_state* state)
+// The body returns void and must set the execution status to indicate
+// the failure. It may adjust `state->ip` if a different stopping position
+// is required. The instruction chain stops when the body returns.
+#define U7_VM_DEFINE_INSTRUCTION_FAILURE_FN(fn_name, self_type)      \
+  __attribute__((cold)) static inline void fn_name##_failure_impl(   \
+      self_type const* self, struct u7_vm_state* state, void* base); \
+                                                                     \
+  U7_VM_INSTRUCTION_EXEC_CALL_CONV                                   \
+  __attribute__((cold, noinline)) static bool fn_name##_failure(     \
+      void* data, struct u7_vm_state* state,                         \
+      struct u7_vm_instruction const* ip, void* base) {              \
+    state->ip = ip;                                                  \
+    fn_name##_failure_impl((self_type const*)data, state, base);     \
+    return false;                                                    \
+  }                                                                  \
+                                                                     \
+  __attribute__((cold)) static inline void fn_name##_failure_impl(   \
+      __attribute__((unused)) self_type const* self,                 \
+      __attribute__((unused)) struct u7_vm_state* state,             \
+      __attribute__((unused)) void* base)
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -172,15 +172,31 @@ static inline struct u7_vm_instruction const* u7_vm_stack_pop_frame(
   return frame_header.return_ip;
 }
 
+// Returns a pointer to the current frame's base (the start of its header).
+static inline void* u7_vm_stack_frame_base(struct u7_vm_stack* self) {
+  assert(self->base_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
+  return u7_vm_memory_add_offset(self->memory, self->base_offset);
+}
+
+// Returns the layout of the frame at `base`.
+static inline struct u7_vm_stack_frame_layout const*
+u7_vm_stack_frame_layout_at(void* base) {
+  assert(u7_vm_memory_is_aligned(base, U7_VM_DEFAULT_ALIGNMENT));
+  return ((struct u7_vm_stack_frame_header const*)base)->frame_layout;
+}
+
+// Returns a pointer to the locals of the frame at `base`.
+static inline void* u7_vm_stack_locals_at(void* base) {
+  assert(u7_vm_memory_is_aligned(base, U7_VM_DEFAULT_ALIGNMENT));
+  return u7_vm_memory_add_offset(base, U7_VM_STACK_FRAME_HEADER_SIZE);
+}
+
 // Returns the current frame layout.
 static inline struct u7_vm_stack_frame_layout const*
 u7_vm_stack_current_frame_layout(struct u7_vm_stack* self) {
-  assert(self->base_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(self->top_offset >=
          self->base_offset + sizeof(struct u7_vm_stack_frame_header));
-  return ((struct u7_vm_stack_frame_header const*)u7_vm_memory_add_offset(
-              self->memory, self->base_offset))
-      ->frame_layout;
+  return u7_vm_stack_frame_layout_at(u7_vm_stack_frame_base(self));
 }
 
 // Returns a pointer to the globals.
@@ -188,19 +204,17 @@ static inline void* u7_vm_stack_globals(struct u7_vm_stack* self) {
   assert(self->top_offset >= U7_VM_STACK_FRAME_HEADER_SIZE);
   assert(self->top_offset >=
          U7_VM_STACK_FRAME_HEADER_SIZE +
-             ((struct u7_vm_stack_frame_header const*)(self->memory))
-                 ->frame_layout->locals_size);
-  return u7_vm_memory_add_offset(self->memory, U7_VM_STACK_FRAME_HEADER_SIZE);
+             u7_vm_stack_frame_layout_at(self->memory)->locals_size);
+  return u7_vm_stack_locals_at(self->memory);
 }
 
 // Returns a pointer the current locals.
 static inline void* u7_vm_stack_locals(struct u7_vm_stack* self) {
-  assert(self->base_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
+  void* const base = u7_vm_stack_frame_base(self);
   assert(self->top_offset >=
          self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE +
-             u7_vm_stack_current_frame_layout(self)->locals_size);
-  return u7_vm_memory_add_offset(
-      self->memory, self->base_offset + U7_VM_STACK_FRAME_HEADER_SIZE);
+             u7_vm_stack_frame_layout_at(base)->locals_size);
+  return u7_vm_stack_locals_at(base);
 }
 
 // False -- stops iteration.

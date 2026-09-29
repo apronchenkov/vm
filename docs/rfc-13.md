@@ -31,7 +31,21 @@ This optimisation avoids updating the field on every dispatch. The
 instruction that stops the chain must set `state->ip` to the position
 required by its semantics before returning.
 
-### 2.3. Calling convention
+### 2.3. Frame-base contract
+
+Each instruction receives the current frame's base pointer, `base`, as an
+argument, corresponding to `u7_vm_stack_frame_base(state->stack)`. This
+allows instruction bodies to access locals and the frame layout without
+going through `state->stack`.
+
+Instructions that push or pop frames must recompute `base` before passing
+it to the next instruction in the chain. Other instructions can forward
+it unchanged.
+
+In synthetic benchmarks, passing `base` reduced runtime by up to 9%.
+The effect on real programs may differ.
+
+### 2.4. Calling convention
 
 Use `__attribute__((preserve_none))` where supported to reduce
 register-preservation requirements; otherwise, use the ordinary calling
@@ -40,7 +54,7 @@ convention.
 In a synthetic benchmark, this reduced runtime by approximately 4-9%. The
 benefit may be smaller in real programs.
 
-### 2.4. Compiler requirements
+### 2.5. Compiler requirements
 
 The implementation requires `musttail` support and has been built and
 tested with Clang. GCC supports `musttail` starting with version 15, but
@@ -116,6 +130,9 @@ No specific fusion is proposed here.
 
 - Benchmark representative programs running on the VM and identify common
   bottlenecks.
-- Identify frequently accessed values that could be passed as additional
-  `execute_fn` arguments, following the approach used for `ip`. Measure
-  the effects on loads, stores, and register pressure.
+- Identify frequently accessed values (such as the stack top) that could
+  be passed as additional `execute_fn` arguments, following the approach
+  used for `ip`. Measure the effects on loads, stores, and register pressure.
+- Investigate whether storing frequently accessed values in thread-local
+  variables, alongside or instead of passing them as `execute_fn` arguments,
+  can improve performance.

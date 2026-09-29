@@ -67,10 +67,11 @@ enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self) {
   assert(self->status != U7_VM_STATE_STATUS_RUNNING);
   self->status = U7_VM_STATE_STATUS_RUNNING;
   do {
+    void* base = u7_vm_stack_frame_base(&self->stack);
     do {
       assert(self->ip >= self->instructions &&
              self->ip < self->instructions + self->instructions_size);
-    } while (U7_VM_INSTRUCTION_EXECUTE(self->ip, self));
+    } while (U7_VM_INSTRUCTION_EXECUTE(self->ip, self, base));
   } while (self->status == U7_VM_STATE_STATUS_EXCEPTION &&
            u7_vm_state_handle_exception(self));
 

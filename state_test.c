@@ -16,7 +16,7 @@ U7_VM_DEFINE_INSTRUCTION_EXEC(execute_step, void) {
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_stop, void) {
   state->status = U7_VM_STATE_STATUS_HALTED;
   state->ip = ip;
-  return NULL;
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT();
 }
 
 U7_TEST(test_dispatch_chains_musttail_and_stops) {
@@ -50,7 +50,8 @@ static int g_jump_count = 0;
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_jump, struct jump_instruction) {
   g_jump_count += 1;
-  return state->instructions + self->target;
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT(
+      .ip = state->instructions + self->target, .base = base);
 }
 
 U7_TEST(test_dispatch_explicit_instruction_can_set_ip_and_continue) {
@@ -131,7 +132,7 @@ U7_TEST(test_dispatch_does_not_grow_the_native_stack) {
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_suspend, void) {
   state->ip = ip + 1;
   state->status = U7_VM_STATE_STATUS_SUSPENDED;
-  return NULL;
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT();
 }
 
 U7_TEST(test_state_run_suspends_and_resumes_at_the_next_instruction) {
@@ -181,7 +182,7 @@ U7_TEST(test_state_run_on_a_halted_state_is_a_noop) {
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_corrupt, void) {
   state->status = U7_VM_STATE_STATUS_CORRUPTED;
   state->ip = ip;
-  return NULL;
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT();
 }
 
 U7_TEST(test_state_run_on_a_corrupted_state_is_a_noop) {
@@ -213,13 +214,14 @@ struct push_frame_instruction {
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_push_frame,
                                        struct push_frame_instruction) {
   U7_ASSERT_OK(u7_vm_stack_push_frame(&state->stack, self->layout, ip));
-  return ip + 1;
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT(
+      .ip = ip + 1, .base = u7_vm_stack_frame_base(&state->stack));
 }
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_raise, void) {
   state->status = U7_VM_STATE_STATUS_EXCEPTION;
   state->ip = ip;
-  return NULL;
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT();
 }
 
 static int g_deinit_count = 0;
