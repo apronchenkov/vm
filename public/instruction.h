@@ -90,14 +90,14 @@ struct u7_vm_instruction {
 
 // Result of a U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT body.
 struct u7_vm_instruction_exec_explicit_result {
-  bool stop;  // ip and base are ignored when true.
-  struct u7_vm_instruction const* ip;
-  void* base;
+  struct u7_vm_instruction const* /*nonnull*/ ip;  // Next or stopping position.
+  void* /*nullable*/ base;                         // Ignored when stopping.
+  bool stop;
 };
 
 // Constructs a result for a U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT body.
-// Specify `.ip` and `.base` to continue, or `.stop = true` to stop.
-// `stop` defaults to false.
+// `.stop` defaults to false. `.ip` is required for both continuation and
+// stopping; `.base` is required only for continuation.
 #define U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT(...) \
   ((struct u7_vm_instruction_exec_explicit_result){__VA_ARGS__})
 
@@ -106,21 +106,22 @@ struct u7_vm_instruction_exec_explicit_result {
 // and `base` points to the current frame's base.
 //
 // Unlike U7_VM_DEFINE_INSTRUCTION_EXEC, this macro lets the body choose
-// the next instruction and supply its frame base.
+// where execution continues or stops.
 //
 // Return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT with `.ip` and `.base`
-// specifying the next instruction and its frame base. Leave `state->ip`
-// unchanged. Use `.ip = ip + 1, .base = base` to execute the following
-// instruction in the same frame.
+// specifying the next instruction and its frame base. Use
+// `.ip = ip + 1, .base = base` to execute the following instruction
+// in the same frame.
 //
 // After changing frames or relocating the stack, recompute `base` before
 // using it again or returning it for further execution.
 //
-// Return a result with `.stop = true` to stop the instruction chain.
-// The returned `ip` and `base` are then ignored. Before returning, set
-// `state->ip` to the position required by the instruction's semantics.
-// For example, yield sets it to `ip + 1` so the next call to
-// u7_vm_state_run resumes after it.
+// Set `.stop = true` to stop the instruction chain. The returned `ip`
+// is stored in `state->ip`, and `base` is ignored. For example, yield
+// returns `.ip = ip + 1, .stop = true` to resume after itself.
+//
+// The body must not modify `state->ip` or rely on it identifying the
+// current instruction.
 #define U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(fn_name, self_type)             \
   __attribute__((always_inline)) static inline struct                          \
       u7_vm_instruction_exec_explicit_result                                   \
@@ -132,10 +133,13 @@ struct u7_vm_instruction_exec_explicit_result {
       struct u7_vm_instruction const* ip, void* base) {                        \
     struct u7_vm_instruction_exec_explicit_result const next =                 \
         fn_name##_impl((self_type const*)data, state, ip, base);               \
+    assert(next.ip != NULL);                                                   \
+    assert(next.ip >= state->instructions &&                                   \
+           next.ip < state->instructions + state->instructions_size);          \
     if (U7_UNLIKELY(next.stop)) {                                              \
+      state->ip = next.ip;                                                     \
       return false;                                                            \
     }                                                                          \
-    assert(next.ip < state->instructions + state->instructions_size);          \
     __attribute__((musttail)) return U7_VM_INSTRUCTION_EXECUTE(next.ip, state, \
                                                                next.base);     \
   }                                                                            \

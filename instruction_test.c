@@ -14,8 +14,7 @@ U7_VM_DEFINE_INSTRUCTION_EXEC(execute_step, void) {
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_stop, void) {
   state->status = U7_VM_STATE_STATUS_HALTED;
-  state->ip = ip;
-  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT(.stop = true);
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT(.ip = ip, .stop = true);
 }
 
 static bool g_guarded_should_succeed = true;
