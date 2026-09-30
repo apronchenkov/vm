@@ -71,7 +71,7 @@ struct u7_vm_stack_frame_header {
 enum {
   U7_VM_STACK_FRAME_HEADER_SIZE =
       (sizeof(struct u7_vm_stack_frame_header) + U7_VM_DEFAULT_ALIGNMENT - 1) &
-      -(size_t)U7_VM_DEFAULT_ALIGNMENT
+  -(size_t)U7_VM_DEFAULT_ALIGNMENT
 };
 
 //   ...
@@ -102,14 +102,18 @@ void u7_vm_stack_destroy(struct u7_vm_stack* self);
 // Ensures that the stack can hold at least `required_capacity` bytes
 // without reallocation. If the current capacity is smaller, new storage
 // is allocated; otherwise, this function does nothing.
-u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
-                             size_t required_capacity);
+//
+// NOTE: For better performance, callers are strongly advised to check
+// the stack capacity first and call this function only when growth is needed.
+__attribute__((cold)) u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
+                                                   size_t required_capacity);
 
 // Pushes a frame onto the stack. The stack treats `return_ip` as opaque
 // and returns it unchanged from `u7_vm_stack_pop_frame()` when the frame
 // is removed.
 static inline u7_error u7_vm_stack_push_frame(
-    struct u7_vm_stack* self, struct u7_vm_stack_frame_layout const* frame_layout,
+    struct u7_vm_stack* self,
+    struct u7_vm_stack_frame_layout const* frame_layout,
     struct u7_vm_instruction const* return_ip) {
   assert(self->top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
   assert(frame_layout->locals_size % U7_VM_DEFAULT_ALIGNMENT == 0);
@@ -126,7 +130,9 @@ static inline u7_error u7_vm_stack_push_frame(
   if (overflow) {
     return u7_errnof(EOVERFLOW, "u7_vm_stack_push_frame: size overflow");
   }
-  U7_RETURN_IF_ERROR(u7_vm_stack_reserve(self, required_capacity));
+  if (U7_UNLIKELY(required_capacity > self->capacity)) {
+    U7_RETURN_IF_ERROR(u7_vm_stack_reserve(self, required_capacity));
+  }
 
   struct u7_vm_stack_frame_header* const frame_header =
       (struct u7_vm_stack_frame_header*)u7_vm_memory_add_offset(
