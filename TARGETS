@@ -2,6 +2,7 @@ cc_library(
     name='vm',
     headers=[
         'public/allocator.h',
+        'public/attributes.h',
         'public/instruction.h',
         'public/memory_utils.h',
         'public/stack.h',

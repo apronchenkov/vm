@@ -14,7 +14,8 @@ U7_VM_DEFINE_INSTRUCTION_EXEC(execute_step, void) {
 
 U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_stop, void) {
   state->status = U7_VM_STATE_STATUS_HALTED;
-  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT(.ip = ip, .stop = true);
+  return U7_VM_INSTRUCTION_EXEC_EXPLICIT_RESULT(.ip = ip, .cursor = cursor,
+                                                .stop = true);
 }
 
 static bool g_guarded_should_succeed = true;
@@ -82,7 +83,7 @@ U7_TEST(test_cold_failure_instruction_leaves_ip_and_stops_on_failure) {
 
   U7_ASSERT_EQ(g_guarded_call_count, 1);
   U7_ASSERT_EQ(g_guarded_failure_count, 1);
-  U7_ASSERT_EQ(g_step_count, 0);  // never reached
+  U7_ASSERT_EQ(g_step_count, 0);              // never reached
   U7_ASSERT(state.ip == state.instructions);  // left at the failing instruction
   u7_vm_state_destroy(&state);
 }

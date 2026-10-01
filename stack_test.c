@@ -28,9 +28,12 @@ U7_TEST(test_iterate_visits_every_frame_outward) {
 
   struct u7_vm_stack stack;
   U7_ASSERT_OK(u7_vm_stack_init(&stack, 0, u7_vm_default_allocator));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &root_layout, NULL));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame1_layout, NULL));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame2_layout, NULL));
+  struct u7_vm_stack_frame_cursor cursor =
+      u7_vm_stack_load_frame_cursor(&stack);
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &root_layout, NULL, &cursor));
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame1_layout, NULL, &cursor));
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame2_layout, NULL, &cursor));
+  u7_vm_stack_store_frame_cursor(&stack, cursor);
 
   struct collect_layouts_arg collected = {0};
   u7_vm_stack_iterate(&stack, &collected, collect_layouts);
@@ -59,8 +62,11 @@ U7_TEST(test_iterate_stops_when_visitor_returns_false) {
 
   struct u7_vm_stack stack;
   U7_ASSERT_OK(u7_vm_stack_init(&stack, 0, u7_vm_default_allocator));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &root_layout, NULL));
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame1_layout, NULL));
+  struct u7_vm_stack_frame_cursor cursor =
+      u7_vm_stack_load_frame_cursor(&stack);
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &root_layout, NULL, &cursor));
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &frame1_layout, NULL, &cursor));
+  u7_vm_stack_store_frame_cursor(&stack, cursor);
 
   struct collect_layouts_arg collected = {0};
   u7_vm_stack_iterate(&stack, &collected, stop_after_first);
@@ -93,8 +99,11 @@ U7_TEST(test_growing_the_stack_preserves_frame_contents) {
 
   enum { kFrameCount = 256 };
   for (int i = 0; i < kFrameCount; ++i) {
-    U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, NULL));
-    *(int*)u7_vm_stack_locals(&stack) = i;
+    struct u7_vm_stack_frame_cursor cursor =
+        u7_vm_stack_load_frame_cursor(&stack);
+    U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, NULL, &cursor));
+    *(int*)u7_vm_stack_frame_locals(cursor.base) = i;
+    u7_vm_stack_store_frame_cursor(&stack, cursor);
   }
 
   int next_expected = kFrameCount - 1;
@@ -150,8 +159,12 @@ U7_TEST(test_push_frame_reports_allocation_failure) {
       u7_vm_stack_init(&stack, 0, u7_vm_limited_allocator_make(&limited)));
 
   struct u7_vm_stack_frame_layout layout = {.description = "frame"};
-  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, NULL));
-  U7_ASSERT_ERROR_CODE(u7_vm_stack_push_frame(&stack, &layout, NULL), ENOMEM);
+  struct u7_vm_stack_frame_cursor cursor =
+      u7_vm_stack_load_frame_cursor(&stack);
+  U7_ASSERT_OK(u7_vm_stack_push_frame(&stack, &layout, NULL, &cursor));
+  U7_ASSERT_ERROR_CODE(u7_vm_stack_push_frame(&stack, &layout, NULL, &cursor),
+                       ENOMEM);
+  u7_vm_stack_store_frame_cursor(&stack, cursor);
   u7_vm_stack_destroy(&stack);
 }
 

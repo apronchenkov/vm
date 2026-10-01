@@ -27,8 +27,9 @@ u7_error u7_vm_stack_init(struct u7_vm_stack* self, size_t capacity,
 }
 
 void u7_vm_stack_destroy(struct u7_vm_stack* self) {
-  while (self->base_offset != self->top_offset) {
-    (void)u7_vm_stack_pop_frame(self);
+  struct u7_vm_stack_frame_cursor cursor = u7_vm_stack_load_frame_cursor(self);
+  while (cursor.base != cursor.top) {
+    (void)u7_vm_stack_pop_frame(&cursor);
   }
   if (self->memory != NULL) {
     self->allocator.deallocate_fn(self->allocator.data, self->memory,
@@ -67,13 +68,12 @@ u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
 
 void u7_vm_stack_iterate(struct u7_vm_stack* self, void* data,
                          u7_vm_stack_visitor_fn_t visitor) {
+  if (self->base_offset == self->top_offset) {
+    return;  // nothing has been pushed yet
+  }
   size_t base_offset = self->base_offset;
-  size_t top_offset = self->top_offset;
-  while (base_offset != top_offset) {
-    assert(base_offset < top_offset);
+  for (;;) {
     assert(base_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
-    assert(top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
-    assert(top_offset - base_offset >= sizeof(struct u7_vm_stack_frame_header));
     struct u7_vm_stack_frame_header const frame_header =
         *(struct u7_vm_stack_frame_header*)u7_vm_memory_add_offset(self->memory,
                                                                    base_offset);
@@ -83,7 +83,9 @@ void u7_vm_stack_iterate(struct u7_vm_stack* self, void* data,
                 self->memory, base_offset + U7_VM_STACK_FRAME_HEADER_SIZE))) {
       break;
     }
-    top_offset = base_offset;
-    base_offset = frame_header.old_base_offset;
+    if (frame_header.previous_base_delta == 0) {
+      break;  // just visited the root
+    }
+    base_offset -= frame_header.previous_base_delta;
   }
 }

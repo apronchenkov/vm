@@ -31,19 +31,20 @@ This optimisation avoids updating the field on every dispatch. The
 instruction that stops the chain must set `state->ip` to the position
 required by its semantics before returning.
 
-### 2.3. Frame-base contract
+### 2.3. Frame cursor
 
-Each instruction receives the current frame's base pointer, `base`, as an
-argument, corresponding to `u7_vm_stack_frame_base(state->stack)`. This
-allows instruction bodies to access locals and the frame layout without
-going through `state->stack`.
+Extract frequently accessed state into a lightweight cursor and provide
+an API that operates on it. Threading the cursor through a call chain
+can reduce repeated loads and stores by allowing its values to remain
+in registers.
 
-Instructions that push or pop frames must recompute `base` before passing
-it to the next instruction in the chain. Other instructions can forward
-it unchanged.
+In the VM, `u7_vm_stack_frame_cursor` holds the current frame's `base`
+and live stack `top`, replacing the earlier approach of threading `base`
+alone. The cursor is authoritative during the chain; store its position
+before returning or calling code that requires current stored offsets.
 
-In synthetic benchmarks, passing `base` reduced runtime by up to 9%.
-The effect on real programs may differ.
+This technique improved execution speed by 11–13% in synthetic benchmarks
+exercising stack operations, compared with threading `base` alone.
 
 ### 2.4. Calling convention
 
@@ -130,9 +131,6 @@ No specific fusion is proposed here.
 
 - Benchmark representative programs running on the VM and identify common
   bottlenecks.
-- Identify frequently accessed values (such as the stack top) that could
-  be passed as additional `execute_fn` arguments, following the approach
-  used for `ip`. Measure the effects on loads, stores, and register pressure.
 - Investigate whether storing frequently accessed values in thread-local
   variables, alongside or instead of passing them as `execute_fn` arguments,
   can improve performance.

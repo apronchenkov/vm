@@ -74,10 +74,6 @@ static inline void* u7_vm_state_globals(struct u7_vm_state* self) {
   return u7_vm_stack_globals(&self->stack);
 }
 
-static inline void* u7_vm_state_locals(struct u7_vm_state* self) {
-  return u7_vm_stack_locals(&self->stack);
-}
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus

@@ -17,12 +17,15 @@ u7_error u7_vm_state_init(struct u7_vm_state* self,
   self->status = U7_VM_STATE_STATUS_READY;
   U7_RETURN_IF_ERROR(u7_vm_stack_init(
       &self->stack, options.initial_stack_capacity, options.allocator));
-  u7_error error = u7_vm_stack_push_frame(&self->stack, options.statics_layout,
-                                          self->instructions);
+  struct u7_vm_stack_frame_cursor cursor =
+      u7_vm_stack_load_frame_cursor(&self->stack);
+  u7_error const error = u7_vm_stack_push_frame(
+      &self->stack, options.statics_layout, self->instructions, &cursor);
   if (error.error_code != 0) {
     u7_vm_stack_destroy(&self->stack);
     return error;
   }
+  u7_vm_stack_store_frame_cursor(&self->stack, cursor);
   return u7_ok();
 }
 
@@ -30,30 +33,41 @@ void u7_vm_state_destroy(struct u7_vm_state* self) {
   u7_vm_stack_destroy(&self->stack);
 }
 
-// Unwinds frames and consults each frame's exception_handler_fn in turn.
-// Returns true if a frame recovered, with status restored to RUNNING; returns
-// false if the exception reached the root frame unhandled.
+// Unwinds frames and invokes their exception handlers.
+// Returns true on recovery, with status set to RUNNING.
+// Returns false if the exception remains unhandled at the root frame.
+//
+// The stack's stored position is current before each handler call and
+// when this function returns. Handlers may modify the stack and must
+// leave its stored position current.
 static bool u7_vm_state_handle_exception(struct u7_vm_state* self) {
   assert(self->status == U7_VM_STATE_STATUS_EXCEPTION);
+  struct u7_vm_stack_frame_cursor cursor =
+      u7_vm_stack_load_frame_cursor(&self->stack);
   for (;;) {
     struct u7_vm_stack_frame_layout const* const frame_layout =
-        u7_vm_stack_current_frame_layout(&self->stack);
+        u7_vm_stack_frame_layout(cursor.base);
 
-    if (frame_layout->exception_handler_fn != NULL &&
-        frame_layout->exception_handler_fn(
-            self, frame_layout->exception_handler_data) ==
-            U7_VM_EXCEPTION_HANDLER_ACTION_RECOVER) {
-      assert(self->ip >= self->instructions &&
-             self->ip < self->instructions + self->instructions_size);
-      self->status = U7_VM_STATE_STATUS_RUNNING;
-      return true;
+    if (frame_layout->exception_handler_fn != NULL) {
+      u7_vm_stack_store_frame_cursor(&self->stack, cursor);
+      enum u7_vm_exception_handler_action const action =
+          frame_layout->exception_handler_fn(
+              self, frame_layout->exception_handler_data);
+      if (action == U7_VM_EXCEPTION_HANDLER_ACTION_RECOVER) {
+        assert(self->ip >= self->instructions &&
+               self->ip < self->instructions + self->instructions_size);
+        self->status = U7_VM_STATE_STATUS_RUNNING;
+        return true;
+      }
+      cursor = u7_vm_stack_load_frame_cursor(&self->stack);
     }
 
     // Keep the root frame alive so globals remain accessible.
-    if (self->stack.base_offset == 0) {
+    if (cursor.base == self->stack.memory) {
+      u7_vm_stack_store_frame_cursor(&self->stack, cursor);
       return false;
     }
-    self->ip = u7_vm_stack_pop_frame(&self->stack);
+    self->ip = u7_vm_stack_pop_frame(&cursor);
   }
 }
 
@@ -67,11 +81,10 @@ enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self) {
   assert(self->status != U7_VM_STATE_STATUS_RUNNING);
   self->status = U7_VM_STATE_STATUS_RUNNING;
   do {
-    void* base = u7_vm_stack_frame_base(&self->stack);
     do {
       assert(self->ip >= self->instructions &&
              self->ip < self->instructions + self->instructions_size);
-    } while (U7_VM_INSTRUCTION_EXECUTE(self->ip, self, base));
+    } while (U7_VM_INSTRUCTION_EXECUTE(self));
   } while (self->status == U7_VM_STATE_STATUS_EXCEPTION &&
            u7_vm_state_handle_exception(self));
 
