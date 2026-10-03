@@ -49,8 +49,6 @@ U7_VM_DEFINE_STACK_FRAME_CURSOR_PUSH_POP(i64, int64_t)
 U7_VM_DEFINE_STACK_FRAME_CURSOR_PUSH_POP(f32, float)
 U7_VM_DEFINE_STACK_FRAME_CURSOR_PUSH_POP(f64, double)
 
-#undef U7_VM_DEFINE_STACK_FRAME_CURSOR_PUSH_POP
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus
