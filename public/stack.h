@@ -121,11 +121,8 @@ void u7_vm_stack_destroy(struct u7_vm_stack* self);
 //
 // Store the live cursor before calling and reload it afterward.
 // Growth may invalidate other pointers into the stack.
-//
-// For better performance, callers are strongly advised to check capacity
-// first and call this function only when growth is needed.
-__attribute__((cold)) u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
-                                                   size_t required_capacity);
+u7_error u7_vm_stack_reserve(struct u7_vm_stack* self,
+                             size_t required_capacity);
 
 // Frame accessors do not read the stack's stored offsets.
 // `base` must point to an existing frame in the current allocation.
@@ -196,46 +193,84 @@ u7_vm_stack_frame_cursor_adjust_top(struct u7_vm_stack_frame_cursor cursor,
   return cursor;
 }
 
+// Returns true if the frame header, locals, and extra capacity fit above
+// `cursor.top` without growing the stack. Returns false on size overflow.
+static inline bool u7_vm_stack_push_frame_capacity_check(
+    struct u7_vm_stack const* self,
+    struct u7_vm_stack_frame_layout const* frame_layout,
+    struct u7_vm_stack_frame_cursor cursor) {
+  size_t const top_offset = (size_t)((char*)cursor.top - (char*)self->memory);
+  assert(top_offset <= self->capacity);
+  // The frame's own size first (independent of the stack, so it computes in
+  // parallel with top_offset), then a single comparison with the room left.
+  bool overflow = false;
+  const size_t frame_size = U7_ADD_OVERFLOW_U64(
+      U7_ADD_OVERFLOW_U64((size_t)U7_VM_STACK_FRAME_HEADER_SIZE,
+                          frame_layout->locals_size, &overflow),
+      frame_layout->extra_capacity, &overflow);
+  return !overflow && frame_size <= self->capacity - top_offset;
+}
+
+// Slow path for u7_vm_stack_push_frame. Handles stack growth and size
+// overflow. Call u7_vm_stack_push_frame instead of calling this directly.
+//
+// On error, leaves `*cursor` unchanged and valid.
+U7_VM_ATTRIBUTE_COLD u7_error
+u7_vm_stack_push_frame_slow(struct u7_vm_stack* self,
+                            struct u7_vm_stack_frame_layout const* frame_layout,
+                            struct u7_vm_instruction const* return_ip,
+                            struct u7_vm_stack_frame_cursor* cursor);
+
 // Pushes a frame at `cursor->top` and updates `*cursor` to the new frame.
 // The first frame pushed onto an empty stack is the root.
 //
 // May grow the allocation, invalidating pointers into the stack.
 // Stores and reloads `*cursor` when growth is needed.
 //
-// On error, leaves `*cursor` unchanged and valid. The stored offsets may
-// have been updated; they need not match the cursor after a successful push.
+// On success, updates `*cursor` to the new frame and live stack top. On error,
+// leaves `*cursor` unchanged and valid. The offsets stored in the stack are
+// unspecified after the call.
 //
-// The stack treats `return_ip` as opaque. u7_vm_stack_pop_frame returns it
-// unchanged when the frame is popped.
+// The stack treats `return_ip` as opaque. u7_vm_stack_pop_frame returns
+// it unchanged when the frame is popped.
+//
+// Performance tips:
+//
+// 1) If you use this function on a performance-critical path and
+//    `frame_layout->init_fn` is NULL by design, consider adding
+//    `U7_ASSUME(frame_layout->init_fn == NULL)` before the call. This can
+//    help the compiler eliminate the code that checks and calls
+//    `frame_layout->init_fn`.
+//
+// 2) For a call-like instruction with a fixed target frame layout,
+//    consider having specialised variants of `execute_fn`: one using
+//    `U7_ASSUME(frame_layout->init_fn == NULL)` and another using
+//    `U7_ASSUME(frame_layout->init_fn != NULL)`. Choose the appropriate
+//    variant when the instruction is created. (If the execution model
+//    allows self-modifying programs, selection can happen during the first
+//    execution of the instruction.)
+//
+// 3) If the caller of this function ends with a tail call (as instruction
+//    execution functions commonly do), consider checking
+//    `u7_vm_stack_push_frame_capacity_check` first. On success,
+//    call `u7_vm_stack_push_frame` on the hot path. On failure, tail-call
+//    a separate implementation that calls `u7_vm_stack_push_frame`.
+//    This can help the compiler move the costs associated with
+//    push_frame's slow path into the function reached by the tail call,
+//    keeping them off the hot path.
+//
 static inline u7_error u7_vm_stack_push_frame(
     struct u7_vm_stack* self,
     struct u7_vm_stack_frame_layout const* frame_layout,
     struct u7_vm_instruction const* return_ip,
     struct u7_vm_stack_frame_cursor* cursor) {
-  void* top = cursor->top;
-  size_t const top_offset = (size_t)((char*)top - (char*)self->memory);
-  assert(top_offset % U7_VM_DEFAULT_ALIGNMENT == 0);
+  assert(u7_vm_memory_is_aligned(cursor->top, U7_VM_DEFAULT_ALIGNMENT));
   assert(frame_layout->locals_size % U7_VM_DEFAULT_ALIGNMENT == 0);
-  assert(top_offset <= self->capacity);
-
-  bool overflow = false;
-  const size_t new_top_offset = U7_ADD_OVERFLOW_U64(
-      top_offset,
-      U7_ADD_OVERFLOW_U64((size_t)U7_VM_STACK_FRAME_HEADER_SIZE,
-                          frame_layout->locals_size, &overflow),
-      &overflow);
-  const size_t required_capacity = U7_ADD_OVERFLOW_U64(
-      new_top_offset, frame_layout->extra_capacity, &overflow);
-  if (overflow) {
-    return u7_errnof(EOVERFLOW, "u7_vm_stack_push_frame: size overflow");
+  if (U7_UNLIKELY(!u7_vm_stack_push_frame_capacity_check(self, frame_layout,
+                                                         *cursor))) {
+    return u7_vm_stack_push_frame_slow(self, frame_layout, return_ip, cursor);
   }
-  if (U7_UNLIKELY(required_capacity > self->capacity)) {
-    u7_vm_stack_store_frame_cursor(self, *cursor);
-    U7_RETURN_IF_ERROR(u7_vm_stack_reserve(self, required_capacity));
-    // Reload both pointers after possible relocation.
-    *cursor = u7_vm_stack_load_frame_cursor(self);
-    top = cursor->top;
-  }
+  void* const top = cursor->top;
   void* const base = cursor->base;
 
   struct u7_vm_stack_frame_header* const frame_header =
@@ -250,7 +285,8 @@ static inline u7_error u7_vm_stack_push_frame(
   }
   *cursor = (struct u7_vm_stack_frame_cursor){
       .base = top,
-      .top = u7_vm_memory_add_offset(self->memory, new_top_offset)};
+      .top = u7_vm_memory_add_offset(
+          top, U7_VM_STACK_FRAME_HEADER_SIZE + frame_layout->locals_size)};
   return u7_ok();
 }
 
@@ -258,9 +294,33 @@ static inline u7_error u7_vm_stack_push_frame(
 // The stack must not be empty.
 //
 // Restores the previous frame's base and uses the popped frame's base
-// as its top.
-// Popping the root frame leaves an empty cursor at the allocation's start.
+// as its top. Popping the root frame leaves an empty cursor at
+// the allocation's start.
+//
 // Does not update the stack's stored offsets.
+//
+// Performance tips:
+//
+// 1) If you use this function on a performance-critical path and
+//    the frame's `deinit_fn` is NULL by design, consider stating this
+//    assumption before the call:
+//
+//      struct u7_vm_stack_frame_layout const* const frame_layout =
+//          u7_vm_stack_frame_layout(cursor->base);
+//      U7_ASSUME(frame_layout->deinit_fn == NULL);
+//
+//    This can help the compiler eliminate the code that checks and calls
+//    `deinit_fn`. Note that we have to load the layout into a local before
+//    using U7_ASSUME.
+//
+// 2) For a return-like instruction that always belongs to the same function
+//    with a fixed frame layout, consider having specialised variants of
+//    `execute_fn`: one using `U7_ASSUME(frame_layout->deinit_fn == NULL)`
+//    and another using `U7_ASSUME(frame_layout->deinit_fn != NULL)`.
+//    Choose the appropriate variant when the instruction is created. (If
+//    the execution model allows self-modifying programs, selection can
+//    happen during the first execution of the instruction.)
+//
 static inline struct u7_vm_instruction const* u7_vm_stack_pop_frame(
     struct u7_vm_stack_frame_cursor* cursor) {
   assert(cursor->top != cursor->base);

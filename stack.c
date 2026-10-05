@@ -89,3 +89,43 @@ void u7_vm_stack_iterate(struct u7_vm_stack* self, void* data,
     base_offset -= frame_header.previous_base_delta;
   }
 }
+
+u7_error u7_vm_stack_push_frame_slow(
+    struct u7_vm_stack* self,
+    struct u7_vm_stack_frame_layout const* frame_layout,
+    struct u7_vm_instruction const* return_ip,
+    struct u7_vm_stack_frame_cursor* cursor) {
+  size_t const top_offset = (size_t)((char*)cursor->top - (char*)self->memory);
+  bool overflow = false;
+  const size_t required_capacity = U7_ADD_OVERFLOW_U64(
+      U7_ADD_OVERFLOW_U64(
+          top_offset,
+          U7_ADD_OVERFLOW_U64((size_t)U7_VM_STACK_FRAME_HEADER_SIZE,
+                              frame_layout->locals_size, &overflow),
+          &overflow),
+      frame_layout->extra_capacity, &overflow);
+  if (overflow) {
+    return u7_errnof(EOVERFLOW, "u7_vm_stack_push_frame: size overflow");
+  }
+  u7_vm_stack_store_frame_cursor(self, *cursor);
+  U7_RETURN_IF_ERROR(u7_vm_stack_reserve(self, required_capacity));
+  // Reload both pointers after possible relocation.
+  void* const top = u7_vm_memory_add_offset(self->memory, self->top_offset);
+  void* const base = u7_vm_memory_add_offset(self->memory, self->base_offset);
+
+  struct u7_vm_stack_frame_header* const frame_header =
+      (struct u7_vm_stack_frame_header*)top;
+  frame_header->previous_base_delta = (size_t)((char*)top - (char*)base);
+  frame_header->frame_layout = frame_layout;
+  frame_header->return_ip = return_ip;
+  if (frame_layout->init_fn) {
+    frame_layout->init_fn(
+        frame_layout,
+        u7_vm_memory_add_offset(top, U7_VM_STACK_FRAME_HEADER_SIZE));
+  }
+  *cursor = (struct u7_vm_stack_frame_cursor){
+      .base = top,
+      .top = u7_vm_memory_add_offset(
+          top, U7_VM_STACK_FRAME_HEADER_SIZE + frame_layout->locals_size)};
+  return u7_ok();
+}
