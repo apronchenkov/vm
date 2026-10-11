@@ -29,24 +29,24 @@ struct u7_vm_state_options u7_vm_state_options_default();
 enum u7_vm_state_status {
   // Initialized, not yet run.
   U7_VM_STATE_STATUS_READY,
-  // Only observed while u7_vm_state_run is on the stack; never a return value
-  // and never seen by a caller inspecting an idle state.
+
+  // Execution is in progress within u7_vm_state_run or u7_vm_state_resume.
   U7_VM_STATE_STATUS_RUNNING,
-  // An instruction stopped the chain for an ordinary, expected pause with no
-  // program-level error. u7_vm_state_run resumes it where it left off.
+
+  // An instruction stopped the chain for an ordinary, expected pause with
+  // no program-level error. u7_vm_state_resume resumes it where it left off.
   U7_VM_STATE_STATUS_SUSPENDED,
-  // An instruction raised an exception. `state->ip` identifies the instruction
+
+  // An exception was raised. `state->ip` identifies the instruction
   // associated with the exception in the current frame.
   U7_VM_STATE_STATUS_EXCEPTION,
-  // An instruction stopped the chain for normal, permanent completion.
-  // Unlike SUSPENDED, calling u7_vm_state_run again is a no-op that returns
-  // HALTED without executing anything.
+
+  // Execution completed normally. The state cannot be resumed.
   U7_VM_STATE_STATUS_HALTED,
-  // Available for an instruction to indicate an unrecoverable breakage; the
-  // core VM never sets this itself, and doesn't attach any particular cause
-  // to it -- that's up to whatever application-level contract the
-  // instruction set wants to build on top. Treated the same as HALTED:
-  // permanent, and a no-op on the next u7_vm_state_run call.
+
+  // An instruction reported an unrecoverable failure. Its meaning is
+  // defined by the instruction set; the core VM never sets this status.
+  // The state cannot be resumed.
   U7_VM_STATE_STATUS_CORRUPTED,
 };
 
@@ -63,12 +63,18 @@ u7_error u7_vm_state_init(struct u7_vm_state* self,
 
 void u7_vm_state_destroy(struct u7_vm_state* self);
 
-// Runs a ready state or resumes a suspended state.
-//
-// Returns the reason execution stopped. Calling this on a terminal state
-// (HALTED, EXCEPTION, or CORRUPTED) returns its current status without
-// executing anything.
+// Runs a READY state. Returns the status reached when this call stops
+// execution.
 enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self);
+
+// Resumes a SUSPENDED state. Returns the status reached when this call stops
+// execution.
+enum u7_vm_state_status u7_vm_state_resume(struct u7_vm_state* self);
+
+// Resumes a SUSPENDED state by raising an exception. Returns the status reached
+// when this call stops execution.
+enum u7_vm_state_status u7_vm_state_resume_with_exception(
+    struct u7_vm_state* self);
 
 static inline void* u7_vm_state_globals(struct u7_vm_state* self) {
   return u7_vm_stack_globals(&self->stack);

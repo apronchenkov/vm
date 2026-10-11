@@ -71,15 +71,10 @@ static bool u7_vm_state_handle_exception(struct u7_vm_state* self) {
   }
 }
 
-enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self) {
-  if (self->status == U7_VM_STATE_STATUS_HALTED ||
-      self->status == U7_VM_STATE_STATUS_EXCEPTION ||
-      self->status == U7_VM_STATE_STATUS_CORRUPTED) {
-    return self->status;
-  }
-
-  assert(self->status != U7_VM_STATE_STATUS_RUNNING);
-  self->status = U7_VM_STATE_STATUS_RUNNING;
+// Executes instructions until one stops the chain, handling exceptions on
+// the way. Expects a RUNNING state.
+static enum u7_vm_state_status u7_vm_state_execute(struct u7_vm_state* self) {
+  assert(self->status == U7_VM_STATE_STATUS_RUNNING);
   do {
     do {
       assert(self->ip >= self->instructions &&
@@ -94,4 +89,35 @@ enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self) {
          self->status == U7_VM_STATE_STATUS_EXCEPTION ||
          self->status == U7_VM_STATE_STATUS_CORRUPTED);
   return self->status;
+}
+
+enum u7_vm_state_status u7_vm_state_run(struct u7_vm_state* self) {
+  assert(self->status == U7_VM_STATE_STATUS_READY);
+  if (self->status != U7_VM_STATE_STATUS_READY) {
+    return self->status;
+  }
+  self->status = U7_VM_STATE_STATUS_RUNNING;
+  return u7_vm_state_execute(self);
+}
+
+enum u7_vm_state_status u7_vm_state_resume(struct u7_vm_state* self) {
+  assert(self->status == U7_VM_STATE_STATUS_SUSPENDED);
+  if (self->status != U7_VM_STATE_STATUS_SUSPENDED) {
+    return self->status;
+  }
+  self->status = U7_VM_STATE_STATUS_RUNNING;
+  return u7_vm_state_execute(self);
+}
+
+enum u7_vm_state_status u7_vm_state_resume_with_exception(
+    struct u7_vm_state* self) {
+  assert(self->status == U7_VM_STATE_STATUS_SUSPENDED);
+  if (self->status != U7_VM_STATE_STATUS_SUSPENDED) {
+    return self->status;
+  }
+  self->status = U7_VM_STATE_STATUS_EXCEPTION;
+  if (!u7_vm_state_handle_exception(self)) {
+    return self->status;
+  }
+  return u7_vm_state_execute(self);
 }

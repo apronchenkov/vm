@@ -40,8 +40,13 @@ enum u7_vm_exception_handler_action {
 //
 // Called while `state->status` is U7_VM_STATE_STATUS_EXCEPTION.
 // `state->ip` identifies the instruction associated with the exception in the
-// current frame: the instruction that raised it in the originating frame, or
-// the instruction at which the frame was suspended after unwinding a callee.
+// current frame.
+//
+// The meaning of `state->ip` is specific to the instruction set. Common
+// examples include the instruction that raised the exception, a call
+// instruction after its callee was unwound due to an exception, or the
+// instruction a suspended state would resume at when
+// u7_vm_state_resume_with_exception injects an exception into it.
 typedef enum u7_vm_exception_handler_action (*u7_vm_exception_handler_fn_t)(
     struct u7_vm_state* state, void* data);
 

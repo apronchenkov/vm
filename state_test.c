@@ -157,13 +157,13 @@ U7_TEST(test_state_run_suspends_and_resumes_at_the_next_instruction) {
   U7_ASSERT_EQ(g_step_count, 1);
   U7_ASSERT(state.ip == state.instructions + 2);
 
-  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_HALTED);
+  U7_ASSERT(u7_vm_state_resume(&state) == U7_VM_STATE_STATUS_HALTED);
   U7_ASSERT_EQ(g_step_count, 2);
 
   u7_vm_state_destroy(&state);
 }
 
-U7_TEST(test_state_run_on_a_halted_state_is_a_noop) {
+U7_TEST(test_state_resume_on_a_halted_state_is_a_noop) {
   struct u7_vm_instruction instructions[] = {{.execute_fn = execute_stop}};
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
@@ -175,7 +175,10 @@ U7_TEST(test_state_run_on_a_halted_state_is_a_noop) {
   U7_ASSERT_OK(u7_vm_state_init(&state, options));
 
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_HALTED);
-  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_HALTED);
+#ifdef NDEBUG
+  // No crash.
+  U7_ASSERT(u7_vm_state_resume(&state) == U7_VM_STATE_STATUS_HALTED);
+#endif  // NDEBUG
 
   u7_vm_state_destroy(&state);
 }
@@ -186,7 +189,7 @@ U7_VM_DEFINE_INSTRUCTION_EXEC_EXPLICIT(execute_corrupt, void) {
                                                 .stop = true);
 }
 
-U7_TEST(test_state_run_on_a_corrupted_state_is_a_noop) {
+U7_TEST(test_state_resume_on_a_corrupted_state_is_a_noop) {
   struct u7_vm_instruction instructions[] = {{.execute_fn = execute_corrupt}};
 
   struct u7_vm_stack_frame_layout statics_layout = {.locals_size = 0};
@@ -198,7 +201,10 @@ U7_TEST(test_state_run_on_a_corrupted_state_is_a_noop) {
   U7_ASSERT_OK(u7_vm_state_init(&state, options));
 
   U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_CORRUPTED);
-  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_CORRUPTED);
+#ifdef NDEBUG
+  // No crash.
+  U7_ASSERT(u7_vm_state_resume(&state) == U7_VM_STATE_STATUS_CORRUPTED);
+#endif  // NDEBUG
 
   u7_vm_state_destroy(&state);
 }
@@ -319,8 +325,109 @@ U7_TEST(test_state_exception_unwinds_to_the_root_when_unhandled) {
   // instruction), not left at the original raise site inside the callee.
   U7_ASSERT(state.ip == state.instructions);
 
-  // An unhandled exception is terminal, same as HALTED/CORRUPTED.
-  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_EXCEPTION);
+  u7_vm_state_destroy(&state);
+}
+
+// What the exception handlers below record, kept in the state's globals.
+struct handler_record {
+  int count;
+  ptrdiff_t ip;
+};
+
+static enum u7_vm_exception_handler_action record_and_recover_at_ip_3(
+    struct u7_vm_state* state, void* data) {
+  (void)data;
+  struct handler_record* const record = u7_vm_state_globals(state);
+  record->count += 1;
+  record->ip = state->ip - state->instructions;
+  state->ip = state->instructions + 3;
+  return U7_VM_EXCEPTION_HANDLER_ACTION_RECOVER;
+}
+
+U7_TEST(test_state_resume_with_exception_invokes_the_handlers) {
+  struct u7_vm_stack_frame_layout callee_layout = {
+      .deinit_fn = deinit_frame,
+      .exception_handler_fn = record_and_recover_at_ip_3,
+      .description = "callee",
+  };
+  struct push_frame_instruction push_data = {.layout = &callee_layout};
+
+  // Instructions:
+  //   0: push_frame(callee)
+  //   1: suspend         (inside the callee)
+  //   2: step            (skipped: resumed with an exception instead)
+  //   3: stop
+  struct u7_vm_instruction instructions[] = {
+      {.data = &push_data, .execute_fn = execute_push_frame},
+      {.execute_fn = execute_suspend},
+      {.execute_fn = execute_step},
+      {.execute_fn = execute_stop},
+  };
+
+  struct u7_vm_stack_frame_layout statics_layout = {
+      .locals_size = sizeof(struct handler_record),
+  };
+  struct u7_vm_state_options options = u7_vm_state_options_default();
+  options.statics_layout = &statics_layout;
+  options.instructions = instructions;
+  options.instructions_size = 4;
+  struct u7_vm_state state;
+  g_step_count = 0;
+  g_deinit_count = 0;
+  U7_ASSERT_OK(u7_vm_state_init(&state, options));
+  struct handler_record* const record = u7_vm_state_globals(&state);
+  *record = (struct handler_record){.count = 0, .ip = -1};
+
+  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_SUSPENDED);
+  U7_ASSERT(state.ip == state.instructions + 2);
+
+  U7_ASSERT(u7_vm_state_resume_with_exception(&state) ==
+            U7_VM_STATE_STATUS_HALTED);
+  U7_ASSERT_EQ(record->count, 1);
+  U7_ASSERT_EQ(record->ip, 2);  // the instruction it would have resumed at
+  U7_ASSERT_EQ(g_step_count, 0);
+  U7_ASSERT(state.stack.base_offset != 0);  // the callee recovered
+  U7_ASSERT_EQ(g_deinit_count, 0);
+
+  u7_vm_state_destroy(&state);
+  U7_ASSERT_EQ(g_deinit_count, 1);
+}
+
+static enum u7_vm_exception_handler_action count_and_decline(
+    struct u7_vm_state* state, void* data) {
+  (void)data;
+  struct handler_record* const record = u7_vm_state_globals(state);
+  record->count += 1;
+  return U7_VM_EXCEPTION_HANDLER_ACTION_UNWIND;
+}
+
+U7_TEST(test_state_resume_with_exception_stops_when_unhandled) {
+  // Instructions:
+  //   0: suspend
+  //   1: stop            (never reached: resumed with an exception instead)
+  struct u7_vm_instruction instructions[] = {
+      {.execute_fn = execute_suspend},
+      {.execute_fn = execute_stop},
+  };
+
+  struct u7_vm_stack_frame_layout statics_layout = {
+      .locals_size = sizeof(struct handler_record),
+      .exception_handler_fn = count_and_decline,
+  };
+  struct u7_vm_state_options options = u7_vm_state_options_default();
+  options.statics_layout = &statics_layout;
+  options.instructions = instructions;
+  options.instructions_size = 2;
+  struct u7_vm_state state;
+  U7_ASSERT_OK(u7_vm_state_init(&state, options));
+  struct handler_record* const record = u7_vm_state_globals(&state);
+  *record = (struct handler_record){.count = 0, .ip = -1};
+
+  U7_ASSERT(u7_vm_state_run(&state) == U7_VM_STATE_STATUS_SUSPENDED);
+  U7_ASSERT(u7_vm_state_resume_with_exception(&state) ==
+            U7_VM_STATE_STATUS_EXCEPTION);
+  U7_ASSERT_EQ(record->count, 1);
+  U7_ASSERT(state.ip == state.instructions + 1);
 
   u7_vm_state_destroy(&state);
 }
